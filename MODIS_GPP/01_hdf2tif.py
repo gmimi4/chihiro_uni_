@@ -24,7 +24,17 @@ out_dir = r"D:\Malaysia\MODIS_GPP\02_tif_Indonesia"
 
 hdfs = glob.glob(in_dir + os.sep + "*.hdf")
 
-for in_file in tqdm(hdfs):
+""" # Fluxとの比較のため絞る """
+hdfs = [h for h in hdfs if "h28" in h]
+
+hdfs_use = []
+for h in hdfs:
+    year = os.path.basename(h).split(".")[1][1:5]
+    if int(year) >= 2003 and int(year) <= 2009:
+        hdfs_use.append(h)
+""" """
+
+for in_file in tqdm(hdfs_use):
     use_filename = os.path.basename(in_file)[20:].replace(".hdf","")
     out_file = out_dir + os.sep + f"{use_filename}_int.tif"
     """ #いちど raw valのtif出力 """
