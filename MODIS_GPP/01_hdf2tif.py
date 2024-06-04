@@ -14,8 +14,13 @@ from tqdm import tqdm
 # import rasterio
 # from matplotlib import pyplot
 
+<<<<<<< HEAD
+in_dir = r"/Volumes/SSD_2/Malaysia/MODIS_GPP/01_download_Indonesia"
+out_dir = r"/Volumes/SSD_2/Malaysia/MODIS_GPP/02_tif_Indonesia"
+=======
 in_dir = r"D:\Malaysia\MODIS_GPP\01_download_Indonesia"
 out_dir = r"D:\Malaysia\MODIS_GPP\02_tif_Indonesia"
+>>>>>>> origin/main
 
 # in_file = r"D:\Malaysia\MODIS_GPP\01_download_Indonesia\MOD17A2HGF.A2000001.h27v08.061.2020125212306.hdf" # raw MODIS HDF in sinusoid projection
 # out_file = r"D:\Malaysia\MODIS_GPP\02_tif_Indonesia\h27v08.061.2020125212306_int.tif"
@@ -24,6 +29,22 @@ out_dir = r"D:\Malaysia\MODIS_GPP\02_tif_Indonesia"
 
 hdfs = glob.glob(in_dir + os.sep + "*.hdf")
 
+<<<<<<< HEAD
+""" #比較のため絞る"""
+hdfs = [h for h in hdfs if "h28v08" in h]
+hdfs_use = []
+for h in hdfs:
+    year = os.path.basename(h).split(".")[1][1:5]
+    if int(year) >=2003 and int(year)<=2009:
+        hdfs_use.append(h)
+
+
+for in_file in tqdm(hdfs_use):
+    # in_file = '/Users/wtakeuchi/Desktop/test.hdf'
+    # in_file='/Volumes/SSD_2/Malaysia/MODIS_GPP/01_download_Indonesia/MOD17A2HGF.A2023361.h32v10.061.2024021044225.h5'
+    # use_filename = os.path.basename(in_file)[20:].replace(".hdf","")
+    use_filename = os.path.basename(in_file).replace(".hdf","")
+=======
 """ # Fluxとの比較のため絞る """
 hdfs = [h for h in hdfs if "h28" in h]
 
@@ -36,6 +57,7 @@ for h in hdfs:
 
 for in_file in tqdm(hdfs_use):
     use_filename = os.path.basename(in_file)[20:].replace(".hdf","")
+>>>>>>> origin/main
     out_file = out_dir + os.sep + f"{use_filename}_int.tif"
     """ #いちど raw valのtif出力 """
     # QC不要
