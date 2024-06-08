@@ -20,8 +20,8 @@ from sklearn.preprocessing import StandardScaler
 
 # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\13310.csv"
 # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\0.csv"
-startyear = 2002
-endyear = 2010
+# startyear = 2002
+# endyear = 2012
 
 def main(csvfile, pval, startyear, endyear):
     # print(csvfile)

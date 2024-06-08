@@ -34,7 +34,7 @@ out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras" + os.sep + "p_" + str(p
 os.makedirs(out_dir, exist_ok=True)
 
 startyear = 2002
-endyear = 2010
+endyear = 2012
 
 # ## extentをつくったポリゴンでtransformを取得する
 # Malaysia_land_shape = r"C:\Users\chihiro\Desktop\PhD\Malaysia\AOI\Administration\National_boundary\Malaysia_national_boundary.shp"
