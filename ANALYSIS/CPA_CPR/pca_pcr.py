@@ -18,7 +18,7 @@ import statsmodels.api as sm
 from sklearn.preprocessing import StandardScaler
 
 
-# csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\13310.csv"
+# csvfile = "/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
 # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\0.csv"
 # startyear = 2002
 # endyear = 2012
@@ -30,7 +30,28 @@ def main(csvfile, pval, startyear, endyear):
     #                      date_parser=lambda x:pd.to_datetime(x,format ="%Y-%m-%d")) #future warning
     df_csv = pd.read_csv(csvfile, index_col = 'datetime',
                          parse_dates=['datetime'])
+    
 
+    """ # AMSREとAMSR2のギャップを補正する"""
+    # ratio_sm = '/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/03_AMSR_comparison/SM_ratio.txt'
+    # ratio_vod = '/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/03_AMSR_comparison/VOD_ratio.txt'    
+    # df_ratio_sm = pd.read_csv(ratio_sm)
+    # df_ratio_vod = pd.read_csv(ratio_vod)
+    # ratio_sm = df_ratio_sm.ratio.values[0]
+    # ratio_vod = df_ratio_vod.ratio.values[0]
+    
+    pi_e = df_csv[((df_csv.index.year < 2012) & (df_csv.index.month < 11))]
+    pi_2 = df_csv[(df_csv.index.year >= 2012) & (df_csv.index.year < 2023)]
+    # calc median
+    pi_e_med = pi_e.median()
+    pi_2_med = pi_2.median()
+    ratio_sm = pi_2_med.SMDSC2 /pi_e_med.SMDSCE
+    ratio_vod = pi_2_med.VODDSC2 /pi_e_med.VODDSCE
+    
+    df_csv["SMDSCErev"] = df_csv["SMDSCE"] *ratio_sm
+    df_csv["VODDSCErev"] = df_csv["VODDSCE"] *ratio_vod
+    
+    
     """ #SMとVODは平均にする"""
     #skipnaでいけた
     # try: #columnにDSCとASCがある場合
@@ -38,25 +59,23 @@ def main(csvfile, pval, startyear, endyear):
     #     df_csv["VOD"] = df_csv[["VODASC", "VODDSC"]].mean(skipna=True, axis='columns')
     #     df_csv= df_csv.drop(["SMASC","SMDSC","VODASC","VODDSC"], axis=1)
     
-    try: #AMSREとAMSR2を一列にする
-        df_csv["SM"] = df_csv[["SMDSCE", "SMDSC2"]].mean(skipna=True, axis='columns')
-        df_csv["VOD"] = df_csv[["VODDSCE", "VODDSC2"]].mean(skipna=True, axis='columns')
-        df_csv= df_csv.drop(["SMDSCE","SMDSC2","VODDSCE","VODDSC2"], axis=1)
-    except: #片方だけの場合
-        vars_list = df_csv.columns.tolist()
-        sv_col_list = [c for c in vars_list if "SM" in c or "VOD" in c]
-        for colname in sv_col_list:
-            if "SM" in colname:
-                newname = "SM"
-            elif "VOD" in colname:
-                newname = "VOD"
-            else:
-                pass
-            # newname = colname[:-3]
-            df_csv= df_csv.rename(columns={colname: newname})
-    
-    df_csv = df_csv[(df_csv.index.year >= startyear) & (df_csv.index.year <= endyear)]
-    
+    # try: #AMSREとAMSR2を一列にする
+    df_csv["SM"] = df_csv[["SMDSCErev", "SMDSC2"]].mean(skipna=True, axis='columns')
+    df_csv["VOD"] = df_csv[["VODDSCErev", "VODDSC2"]].mean(skipna=True, axis='columns')
+    df_csv= df_csv.drop(["SMDSCE","SMDSC2","VODDSCE","VODDSC2", "SMDSCErev", "VODDSCErev"], axis=1)
+    # except: #片方だけの場合
+    #     vars_list = df_csv.columns.tolist()
+    #     sv_col_list = [c for c in vars_list if "SM" in c or "VOD" in c]
+    #     for colname in sv_col_list:
+    #         if "SM" in colname:
+    #             newname = "SM"
+    #         elif "VOD" in colname:
+    #             newname = "VOD"
+    #         else:
+    #             pass
+    #         # newname = colname[:-3]
+    #         df_csv= df_csv.rename(columns={colname: newname})
+        
     
     """ #(pixel単位で)月平均とstdで zscoring""" 
     months = [m+1 for m in range(12)]
