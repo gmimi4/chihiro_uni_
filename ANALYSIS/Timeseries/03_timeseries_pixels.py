@@ -28,39 +28,39 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
     proj_crs = CRS.from_user_input(rio_crs)
     
 # GPP_dir = r"D:\Malaysia\MODIS_GPP\02_tif\res_01\merge"
-GOSIF_dir = r"F:\MAlaysia\SIF\GOSIF\02_tif_age_adjusted\res_01"
+GOSIF_dir = "/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01"
 # KBDI_dir = r"D:\Malaysia\KBDI\1_daily"
-VPD_dir = r"F:\MAlaysia\ECMWF\VPD"
-rain_dir = r"D:\Malaysia\GPM\01_tif"
-temp_dir = r"F:\MAlaysia\ECMWF\Temperature_2m\02_tif\daily_1950"
-Et_dir = r"F:\MAlaysia\GLEAM\02_tif\Et\res_01"
-Eb_dir = r"F:\MAlaysia\GLEAM\02_tif\Eb\res_01"
+VPD_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/VPD"
+rain_dir = "/Volumes/SSD_2/Malaysia/GPM/01_tif"
+temp_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/Temperature_2m/02_tif/daily_1950"
+Et_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Et/res_01"
+Eb_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Eb/res_01"
 # SMASC_dir = r"F:\MAlaysia\SMOS\SMOSIC\04_ras\SM\ASC\res_01"
-SMDSCE_dir = r"E:\Malaysia\AMSRE\01_tif\SM_C\sameday"
-SMDSC2_dir = r"D:\Malaysia\AMSR2\DSC\01_tif\SM_C1"
+SMDSCE_dir = "/Volumes/PortableSSD 1/Malaysia/AMSRE/01_tif/SM_C/sameday"
+SMDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/SM_C1"
 # VODASC_dir = r"F:\MAlaysia\SMOS\SMOSIC\04_ras\VOD\ASC\res_01"
-VODDSCE_dir = r"E:\Malaysia\AMSRE\01_tif\VOD_C\sameday"
-VODDSC2_dir = r"D:\Malaysia\AMSR2\DSC\01_tif\VOD_C1"
+VODDSCE_dir = "/Volumes/PortableSSD 1/Malaysia/AMSRE/01_tif/VOD_C/sameday"
+VODDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/VOD_C1"
 
-out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries"
+out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries"
 
 # Malaysia_land_shape = r"C:\Users\chihiro\Desktop\PhD\Malaysia\AOI\Administration\National_boundary\Malaysia_national_boundary.shp"
-Malaysia_land_shape = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+Malaysia_land_shape = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
 
-GOSIF_list = glob.glob(GOSIF_dir+"\\*.tif")
+GOSIF_list = glob.glob(GOSIF_dir+os.sep+"*.tif")
 # GPP_list = glob.glob(GPP_dir+"\\*.tif")
 # KBDI_list = glob.glob(KBDI_dir+"\\*.tif")
-VPD_list = glob.glob(VPD_dir+"\\*.tif")
-rain_list = glob.glob(rain_dir+"\\*.tif")
-temp_list = glob.glob(temp_dir+"\\*.tif")
-Et_list = glob.glob(Et_dir+"\\*.tif")
-Eb_list = glob.glob(Eb_dir+"\\*.tif")
+VPD_list = glob.glob(VPD_dir+os.sep+"*.tif")
+rain_list = glob.glob(rain_dir+os.sep+"*.tif")
+temp_list = glob.glob(temp_dir+os.sep+"*.tif")
+Et_list = glob.glob(Et_dir+os.sep+"*.tif")
+Eb_list = glob.glob(Eb_dir+os.sep+"*.tif")
 # SMASC_list = glob.glob(SMASC_dir+"\\*.tif")
-SMDSCE_list = glob.glob(SMDSCE_dir+"\\*.tif")
-SMDSC2_list = glob.glob(SMDSC2_dir+"\\*.tif")
+SMDSCE_list = glob.glob(SMDSCE_dir+os.sep+"*.tif")
+SMDSC2_list = glob.glob(SMDSC2_dir+os.sep+"*.tif")
 # VODASC_list = glob.glob(VODASC_dir+"\\*.tif")
-VODDSCE_list = glob.glob(VODDSCE_dir+"\\*.tif")
-VODDSC2_list = glob.glob(VODDSC2_dir+"\\*.tif")
+VODDSCE_list = glob.glob(VODDSCE_dir+os.sep+"*.tif")
+VODDSC2_list = glob.glob(VODDSC2_dir+os.sep+"*.tif")
 
 
 
@@ -168,6 +168,8 @@ def get_yyyyddmm(tif_path,datatype):
 # 処理
 """
 ## First, obtain GOSIF crop shape
+# page = "A4"
+# extent_poly= extent_polygons[page] #this should be done in advance...
 def extent_shape(extent_poly):
     tiflist = GOSIF_list
     tif = tiflist[-1]
@@ -176,7 +178,7 @@ def extent_shape(extent_poly):
         ### ---------------------------------
         #crop to extent
         ### ---------------------------------
-        cropped_ras, raster_transform = mask(src, extent_polygon.geometry, crop=True)
+        cropped_ras, raster_transform = mask(src, extent_poly.geometry, crop=True)
         # meta=src.meta.copy()
         # meta.update({"transform":raster_transform,"width":shape_use[1],"height":shape_use[0],
         #               "crs":proj_crs})
@@ -190,9 +192,9 @@ def extent_shape(extent_poly):
         # meta=src.meta.copy()
         # meta.update({"transform":raster_transform,"width":cropped_ras.shape[1],"height":cropped_ras.shape[0],
         #               "crs":proj_crs})
-        # extent_dir = os.path.dirname(tif)+"\\extent"
+        # extent_dir = os.path.dirname(tif)+os.sep +"extent"
         # os.makedirs(extent_dir,exist_ok=True)        
-        # path_to_output = extent_dir +f"\\{os.path.basename(tif[:-4])}_extent.tif"
+        # path_to_output = extent_dir + os.sep +f"{os.path.basename(tif[:-4])}_extent_{page}.tif"
         # with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         #     with rasterio.open(path_to_output,"w",**meta) as dst:
         #         dst.write(cropped_ras,1)
@@ -245,7 +247,7 @@ for pagename, extent in extent_polygons.items():
         
         final_outdir = out_dir + os.sep + pagename
         os.makedirs(final_outdir, exist_ok=True)
-        outfile = final_outdir + f"\\{pagename}_{kind}_pixels_dates.csv"
+        outfile = final_outdir + os.sep + f"{pagename}_{kind}_pixels_dates.csv"
         
         if os.path.isfile(outfile):
             continue
@@ -306,7 +308,7 @@ for pagename, extent in extent_polygons.items():
             # to csv
             final_outdir = out_dir + os.sep + pagename
             os.makedirs(final_outdir, exist_ok=True)
-            outfile = final_outdir + f"\\{pagename}_{kind}_pixels_dates.csv"
+            outfile = final_outdir + os.sep + f"{pagename}_{kind}_pixels_dates.csv"
             df.to_csv(outfile)
         
        
