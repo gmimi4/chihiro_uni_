@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-# obrain residuals from STL
-# make it as overall residuals for each variable
+# change to cv
+# 
 """
 
 import numpy as np
@@ -25,24 +25,25 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
     rio_crs = CRS.from_epsg(4326)
     proj_crs = CRS.from_user_input(rio_crs)
 
+PageName = 'A4'
 # csv_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels"
-csv_dir = r"C:\Users\chihiro\Desktop\PhD\Malaysia"
-p_val_tif = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_010\p_values_importance.tif"
-importance_tif_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_010"
-out_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_stl\p_010"
-coef_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_quadratic\p_010"
+csv_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{PageName}'
+p_val_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_p_values_importance_2013-2022.tif'
+importance_tif_dir = os.path.dirname(p_val_tif)
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_std/std_ras/p_01'
+# coef_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_quadratic\p_010"
 
 # Palmのあるインデックス取得
 # palm_idx_df = pd.read_csv(palm_indx_txt, header=None)
 # palm_idx_list = palm_idx_df.values.tolist()
 # palm_idx_list = [t[0] for t in palm_idx_list]
 
-# p_valが有意なインデックス取得
-p_src = rasterio.open(p_val_tif)
-p_arr = p_src.read(1)
-p_arr_1d = np.ravel(p_arr)
-p_idx = list(np.where(p_arr_1d < 0.1)[0]) #0.05
-p_idx = [13330]
+# # p_valが有意なインデックス取得
+# p_src = rasterio.open(p_val_tif)
+# p_arr = p_src.read(1)
+# p_arr_1d = np.ravel(p_arr)
+# p_idx = list(np.where(p_arr_1d < 0.1)[0]) #0.05
+# p_idx = [13330]
 
 #両方のインデックスの積集合
 # use_idx = list(set(palm_idx_list) & set(p_idx))
@@ -51,18 +52,6 @@ csvs = glob.glob(os.path.join(csv_dir,"*.csv"))
 # csvs_use = [c for c in csvs if int(os.path.basename(c)[:-4]) in use_idx]
 csvs_use = csvs
 
-nps=12
-n_s =13
-""" # STL plot def"""
-# parameters: https://mlpills.dev/time-series/time-series-forecasting-with-stl/
-def plot_STL(df): #periodは日付indexから自動で決められる
-  df_int = df.interpolate() #defaultで線形補間
-  df_intna = df_int.dropna()
-  stl = STL(df_intna, period=nps, seasonal=n_s)
-  res_stl = stl.fit()
-  # fig = res_stl.plot()
-  
-  return res_stl
 
 """ # dfからMonthly mean dicを得る"""
 months = [m for m in range(1,13)]
@@ -76,6 +65,93 @@ def monthly_mean_dic(df):
     
     return month_dic
 
+
+""" # detrend data, and obtain cv for each month, then sum up"""
+all_resid = {}
+for csvfile in tqdm(csvs_use):    
+    # csvfile = [c for c in csvs_use if "13330" in c][0] #4447 #8682
+    # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\1838.csv"
+    filename = os.path.basename(csvfile)[:-4]
+    df_csv = pd.read_csv(csvfile, index_col = 'datetime',
+                         parse_dates=['datetime'])
+
+    """ #SMとVODは平均にする"""
+    #skipnaでいけた
+    df_csv["SM"] = df_csv[["SMDSCE", "SMDSC2"]].mean(skipna=True, axis='columns')
+    df_csv["VOD"] = df_csv[["VODDSCE", "VODDSC2"]].mean(skipna=True, axis='columns')
+    df_csv= df_csv.drop(["SMDSCE","SMDSC2","VODDSCE","VODDSC2"], axis=1)
+    
+    vars_list = df_csv.columns.tolist()
+    
+    """ #月平均でdetrendする""" 
+    monthly_mean_dic = monthly_mean_dic(df_csv)
+    
+    df_csv_de = df_csv.copy()
+    
+    for var in vars_list:
+        df_csv_de[f"{var}de"] = np.nan
+        df_var = df_csv_de.loc[:,var]
+        month_dic = {}
+        for m in months:
+            month_mean = monthly_mean_dic[m][var]
+            specific_month_rows = df_var[df_var.index.month == m]
+            detrend = specific_month_rows - month_mean
+            monthly_mean = detrend.mean()
+            monthly_std = detrend.std()
+            month_dic[m] = [monthly_mean, monthly_std]
+            
+            ##インデックスで抽出して元のデータフレームの新規列にzscoreを入れる
+            specific_month_idx = specific_month_rows.index.tolist()
+            df_csv_z.loc[specific_month_idx, f"{var}z"] = (df_csv_z[var]-monthly_mean)/monthly_std
+    
+    
+    
+    """ #raw月平均でSTLする"""     
+    df_csv_z = df_csv.copy()
+    
+    var_resid = {}
+    for variable in  vars_list:       
+        df_var = df_csv_z.loc[:,variable]
+        var_mean = df_var.mean()
+        var_std = df_var.std()
+        var_cv = var_mean / var_std
+        
+        var_resid[variable] = var_cv
+        
+
+    all_resid[int(filename)] = var_resid
+
+        
+
+
+""" # Export tif for cv of each variale """ 
+with rasterio.open(tifs[0]) as src:
+    arr = src.read(1)
+    profile=src.profile
+    height, width = arr.shape[0],arr.shape[1]
+    
+#念のためsort
+all_resid_sort = sorted(all_resid.items())
+
+for variable in  vars_list: 
+    var_cv_arr = np.array([c[1][variable] for c in all_resid_sort]) #順番通りに取り出しているはず 
+    var_cv_reshape = var_cv_arr.reshape((height, width)) 
+
+    outfile = os.path.join(out_dir,"cv_{variable}.tif")
+    with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
+        with rasterio.open(outfile, "w", **profile) as dst:
+            dst.write(var_cv_reshape, 1)
+
+
+
+
+
+
+
+
+
+
+""" old """
 """ # obtain climate weights of the pixel"""
 ### まずimportance tifsのarrayセットを得る ------------
 tifs = glob.glob(os.path.join(importance_tif_dir, "*.tif"))

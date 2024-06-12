@@ -75,7 +75,10 @@ def main(csvfile, pval, startyear, endyear):
     #             pass
     #         # newname = colname[:-3]
     #         df_csv= df_csv.rename(columns={colname: newname})
-        
+    
+    
+    """ # set period"""
+    df_csv = df_csv[((df_csv.index.year >= startyear) & (df_csv.index.year <= endyear)) ]
     
     """ #(pixel単位で)月平均とstdで zscoring""" 
     months = [m+1 for m in range(12)]
