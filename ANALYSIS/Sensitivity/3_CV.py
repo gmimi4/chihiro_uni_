@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import glob
 import rasterio
 from tqdm import tqdm
+import csv
+from rasterio.transform import Affine
 # from statsmodels.tsa.seasonal import seasonal_decompose
 from rasterio.plot import show
 from rasterio.crs import CRS
@@ -19,13 +21,13 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
     proj_crs = CRS.from_user_input(rio_crs)
 
 PageName = 'A1'
-csv_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels\{PageName}"
-# csv_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{PageName}'
-p_val_tif = rf'D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\{PageName}_p_values_importance_2013-2022.tif'
-# p_val_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_p_values_importance_2013-2022.tif'
-importance_tif_dir = os.path.dirname(p_val_tif)
-out_dir = r'D:\Malaysia\02_Timeseries\Sensitivity\1_std\std_ras\p_01'
-# out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_std/std_ras/p_01'
+# csv_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels\{PageName}"
+csv_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{PageName}'
+# p_val_tif = rf'D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\{PageName}_p_values_importance_2013-2022.tif'
+p_val_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_p_values_importance_2013-2022.tif'
+# out_dir = r'D:\Malaysia\02_Timeseries\Sensitivity\1_std\std_ras\p_01'
+out_dir = f'/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_std/std_ras/p_01/{PageName}'
+os.makedirs(out_dir,exist_ok=True)
 # coef_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_quadratic\p_010"
 
 # Palmのあるインデックス取得
@@ -99,6 +101,7 @@ for csvfile in tqdm(csvs_use):
     """ # slice period """
     df_csv = df_csv[((df_csv.index.year >= startyear) & (df_csv.index.year <= endyear)) ]
     
+    
     """ #detrend for CV *zscoring generate 0 mean""" 
     # obtain monthly mean for each month
     monthly_mean_org = get_monthly_mean_dic(df_csv)
@@ -171,10 +174,19 @@ for csvfile in tqdm(csvs_use):
 
     cv_files[int(filename)] = cv_overall_var
 
-        
+
+""" # Export dic for later use """
+df_save = pd.DataFrame(cv_files).T
+savename = out_dir+os.sep+f'cvdict_{PageName}_{startyear}-{endyear}.csv'
+df_save.to_csv(savename)
+
 
 
 """ # Export tif for cv of each variale """ 
+### rainが逆になる謎
+# sample_tif = f'/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/extent/GOSIF_2000081_extent_adj_res01_extent_{PageName}.tif'
+
+# with rasterio.open(sample_tif) as src: # pval tif as sample tif
 with rasterio.open(p_val_tif) as src: # pval tif as sample tif
     arr = src.read(1)
     profile=src.profile
@@ -185,11 +197,60 @@ all_resid_sort = sorted(cv_files.items())
 
 for variable in  vars_list: 
     var_cv_arr = np.array([c[1][variable] for c in all_resid_sort]) #順番通りに取り出しているはず 
-    var_cv_reshape = var_cv_arr.reshape((height, width)) 
+    var_cv_reshape = var_cv_arr.reshape((height, width))
 
-    outfile = os.path.join(out_dir,"{PageName}_cv_{variable}.tif")
+    outfile = os.path.join(out_dir,f"{PageName}_cv_{variable}_{startyear}-{endyear}.tif")
     with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         with rasterio.open(outfile, "w", **profile) as dst:
+            dst.write(var_cv_reshape, 1)
+            
+            
+            
+""" # in case to reproduce tif from csv """
+### rainが逆になる謎
+rain_tif = '/Volumes/SSD_2/Malaysia/GPM/01_tif/IMERG_20040903.tif'
+sif_tif = '/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/GOSIF_2000057_extent_adj_res01.tif'
+rain_profile = rasterio.open(rain_tif).profile
+sif_profile = rasterio.open(sif_tif).profile
+
+
+
+df_dict = pd.read_csv(savename).iloc[:,1:]
+
+cv_files_ ={}
+for i,row in df_dict.iterrows():
+    var_dic ={}
+    for var in vars_list:
+        var_dic[var] = row[var]
+    
+    cv_files_[i] = var_dic
+
+
+with rasterio.open(p_val_tif) as src: # pval tif as sample tif
+    arr = src.read(1)
+    profile=src.profile
+    height, width = arr.shape[0],arr.shape[1]
+        
+#念のためsort by filename (idx name)
+all_resid_sort = sorted(cv_files_.items())
+
+for variable in  vars_list: 
+    var_cv_arr = np.array([c[1][variable] for c in all_resid_sort]) #順番通りに取り出しているはず #
+    var_cv_reshape = var_cv_arr.reshape((height, width))
+    
+    if variable =="rain":
+        affine = profile['transform']
+        new_transform = Affine(affine[0],affine[1],affine[2],affine[3],affine[4]*(-1),affine[5])
+        profile_rain = profile.copy()
+        profile_rain['transform'] = new_transform
+        profile_use = profile_rain
+    else:
+        profile_use = profile
+        
+
+    outfile = os.path.join(out_dir,f"{PageName}_cv_{variable}_{startyear}-{endyear}_.tif")
+    with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
+        with rasterio.open(outfile, "w", **profile_use) as dst:
             dst.write(var_cv_reshape, 1)
 
 
