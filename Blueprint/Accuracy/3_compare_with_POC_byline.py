@@ -71,6 +71,9 @@ gdf_terrace = gdf_terrace.explode()
 gdf_terrace.to_file(outmergefile)
 
 
+gdf_terrace = gdf_terrace.reset_index().drop("level_0", axis=1)
+gdf_terrace = gdf_terrace.reset_index().drop("level_1", axis=1)
+
 
 ## create buffer for merged line
 search_distance = 3
@@ -122,11 +125,10 @@ for i,row in gdf_terrace.iterrows(): #pic poc points by 1m buffer
     count_study = len(gdf_point_study_use)
     count_poc = len(gdf_point_poc_use)
     
-    result_dic[i[1]] = [mean_distance, count_study, count_poc] #this i from exploded lines has tupple index
+    result_dic[i] = [mean_distance, count_study, count_poc]
     
 
-
-
+""" #export to csv """
 ### Tableを作成
 df = pd.DataFrame(result_dic.values(), columns=["meandistance","count_study","count_poc"])
 
@@ -134,3 +136,7 @@ df = pd.DataFrame(result_dic.values(), columns=["meandistance","count_study","co
 outfile = out_dir + os.sep + "acuracy_poc_comparison_by_line.csv"
 df.to_csv(outfile)
 
+
+""" # join lineshpe and export"""
+gdf_terrace_join = gdf_terrace.merge(df, left_index=True, right_index=True)
+gdf_terrace_join.to_file(out_dir + os.sep + os.path.basename(terrace_poc)[:-4] + "_merge_accuracy.shp")
