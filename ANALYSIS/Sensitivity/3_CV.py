@@ -24,7 +24,7 @@ PageName = 'A1'
 # csv_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels\{PageName}"
 csv_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{PageName}'
 # p_val_tif = rf'D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\{PageName}_p_values_importance_2013-2022.tif'
-p_val_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_p_values_importance_2013-2022.tif'
+p_val_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_p_values_importance_2013-2022.tif' #as sample tif
 # out_dir = r'D:\Malaysia\02_Timeseries\Sensitivity\1_std\std_ras\p_01'
 out_dir = f'/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_std/std_ras/p_01/{PageName}'
 os.makedirs(out_dir,exist_ok=True)
@@ -50,7 +50,7 @@ csvs = glob.glob(os.path.join(csv_dir,"*.csv"))
 csvs_use = csvs
 
 startyear = 2002
-endyear = 2012
+endyear = 2022
 
 
 """ # dfからMonthly mean dicを得る"""
@@ -102,7 +102,7 @@ for csvfile in tqdm(csvs_use):
     df_csv = df_csv[((df_csv.index.year >= startyear) & (df_csv.index.year <= endyear)) ]
     
     
-    """ #detrend for CV *zscoring generate 0 mean""" 
+    """ #detrend for CV *zscoring generates 0 mean""" 
     # obtain monthly mean for each month
     monthly_mean_org = get_monthly_mean_dic(df_csv)
     
@@ -145,6 +145,27 @@ for csvfile in tqdm(csvs_use):
     
         # monthly_mean_std_dic[var] = month_dic #確認用
     
+        
+    """ #(pixel単位で)Standarized (0-1)""" 
+    
+    df_csv_s = df_csv_z.copy()
+    
+    # monthly_mean_std_dic = {}
+    for var in vars_list:
+        df_csv_s[f"{var}s"] = np.nan
+        df_var = df_csv_s.loc[:,var]
+        for m in months:
+            specific_month_rows = df_var[df_var.index.month == m]
+            monthly_mean = specific_month_rows.mean(skipna=True)
+            monthly_min = specific_month_rows.min(skipna=True) #min
+            monthly_max = specific_month_rows.max(skipna=True) #max
+    
+            ##インデックスで抽出して元のデータフレームの新規列にsrandarizedを入れる
+            specific_month_idx = specific_month_rows.index.tolist()
+            df_csv_s.loc[specific_month_idx, f"{var}s"] = (df_csv_z[var]-monthly_min)/(monthly_max - monthly_min)
+    
+        # monthly_mean_std_dic[var] = month_dic #確認用
+    
     
     """ #cal CV"""
     ## use original detrended data
@@ -152,7 +173,7 @@ for csvfile in tqdm(csvs_use):
     cv_all_var = {} #for each month
     cv_overall_var = {} #for overall sum
     for variable in  vars_list:     
-        df_var = df_csv_z.loc[:,variable] #use original data
+        df_var = df_csv_s.loc[:,variable+"s"] #use original data
         
         cv_month_var ={}
         for m in months:
@@ -208,50 +229,50 @@ for variable in  vars_list:
             
 """ # in case to reproduce tif from csv """
 ### rainが逆になる謎
-rain_tif = '/Volumes/SSD_2/Malaysia/GPM/01_tif/IMERG_20040903.tif'
-sif_tif = '/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/GOSIF_2000057_extent_adj_res01.tif'
-rain_profile = rasterio.open(rain_tif).profile
-sif_profile = rasterio.open(sif_tif).profile
+# rain_tif = '/Volumes/SSD_2/Malaysia/GPM/01_tif/IMERG_20040903.tif'
+# sif_tif = '/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/GOSIF_2000057_extent_adj_res01.tif'
+# rain_profile = rasterio.open(rain_tif).profile
+# sif_profile = rasterio.open(sif_tif).profile
 
 
 
-df_dict = pd.read_csv(savename).iloc[:,1:]
+# df_dict = pd.read_csv(savename).iloc[:,1:]
 
-cv_files_ ={}
-for i,row in df_dict.iterrows():
-    var_dic ={}
-    for var in vars_list:
-        var_dic[var] = row[var]
+# cv_files_ ={}
+# for i,row in df_dict.iterrows():
+#     var_dic ={}
+#     for var in vars_list:
+#         var_dic[var] = row[var]
     
-    cv_files_[i] = var_dic
+#     cv_files_[i] = var_dic
 
 
-with rasterio.open(p_val_tif) as src: # pval tif as sample tif
-    arr = src.read(1)
-    profile=src.profile
-    height, width = arr.shape[0],arr.shape[1]
+# with rasterio.open(p_val_tif) as src: # pval tif as sample tif
+#     arr = src.read(1)
+#     profile=src.profile
+#     height, width = arr.shape[0],arr.shape[1]
         
-#念のためsort by filename (idx name)
-all_resid_sort = sorted(cv_files_.items())
+# #念のためsort by filename (idx name)
+# all_resid_sort = sorted(cv_files_.items())
 
-for variable in  vars_list: 
-    var_cv_arr = np.array([c[1][variable] for c in all_resid_sort]) #順番通りに取り出しているはず #
-    var_cv_reshape = var_cv_arr.reshape((height, width))
+# for variable in  vars_list: 
+#     var_cv_arr = np.array([c[1][variable] for c in all_resid_sort]) #順番通りに取り出しているはず #
+#     var_cv_reshape = var_cv_arr.reshape((height, width))
     
-    if variable =="rain":
-        affine = profile['transform']
-        new_transform = Affine(affine[0],affine[1],affine[2],affine[3],affine[4]*(-1),affine[5])
-        profile_rain = profile.copy()
-        profile_rain['transform'] = new_transform
-        profile_use = profile_rain
-    else:
-        profile_use = profile
+#     if variable =="rain":
+#         affine = profile['transform']
+#         new_transform = Affine(affine[0],affine[1],affine[2],affine[3],affine[4]*(-1),affine[5])
+#         profile_rain = profile.copy()
+#         profile_rain['transform'] = new_transform
+#         profile_use = profile_rain
+#     else:
+#         profile_use = profile
         
 
-    outfile = os.path.join(out_dir,f"{PageName}_cv_{variable}_{startyear}-{endyear}_.tif")
-    with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
-        with rasterio.open(outfile, "w", **profile_use) as dst:
-            dst.write(var_cv_reshape, 1)
+#     outfile = os.path.join(out_dir,f"{PageName}_cv_{variable}_{startyear}-{endyear}_.tif")
+#     with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
+#         with rasterio.open(outfile, "w", **profile_use) as dst:
+#             dst.write(var_cv_reshape, 1)
 
 
 
