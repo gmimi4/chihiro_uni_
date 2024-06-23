@@ -13,7 +13,6 @@ import numpy as np
 import geopandas as gpd
 from shapely.geometry import Polygon
 import pandas as pd
-import geopandas as gpd
 import glob
 # import matplotlib as mpl
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -22,6 +21,43 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.colors as colors
 from PIL import Image
 plt.rcParams['font.family'] = 'Times New Roman'
+
+# -------------------------------------
+"""# Violin plot """
+# -------------------------------------
+import seaborn as sns
+import pandas as pd
+import numpy as np
+
+in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity/_mosaic'
+tifs = glob.glob(in_dir +os.sep +"*.tif")
+
+data_dic ={}
+for t in tifs:
+    peri = os.path.basename(t)[:-4].split("_")[-1]
+    with rasterio.open(t) as src:
+        arr = src.read(1)
+        arr_ = np.ravel(arr)
+    
+    data_dic[peri] = arr_.tolist()
+    # data_dic["2002-2012"] = arr_.tolist()
+    
+# better to convert to df
+df = pd.DataFrame(data_dic)
+df_melted = df.melt(var_name='Period', value_name='Values')
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+fig =plt.figure()
+sns.set_style('ticks')
+sns.violinplot(x="Period", y="Values", data=df_melted, palette="pastel")
+plt.tick_params() #labelsize = 30 #軸ラベルの大きさ
+plt.title("Sensitivity" ) #size=50 #グラフのタイトル
+plt.ylabel("Score") #size=50#ｙ軸ラベル
+plt.xlabel("")#x軸ラベルの消去
+
 
 
 # -------------------------------------
