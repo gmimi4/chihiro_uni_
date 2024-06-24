@@ -18,7 +18,7 @@ from rasterstats import zonal_stats
 # from osgeo import gdal, ogr
 # import matplotlib.pyplot as plt
 
-PageName = 'A1'
+PageName = 'A4'
 sample_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_Eb_importance_2002-2012.tif'
 # palm_poly = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\extract_Malaysia\Malaysia_PO_area_fin.shp"
 palm_ras = '/Volumes/PortableSSD/MAlaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif'
@@ -30,23 +30,29 @@ h = src_arr.shape[0]
 w = src_arr.shape[1]
 src_arr_tmp = np.arange(h*w).reshape(h, w).astype("int16")
 
-""" #0.1 degree gridポリゴンをつくる """
-# Generate polygons from the raster data
-mask = None
-results = (
-{'properties': {'raster_val': v}, 'geometry': s}
-for i, (s, v) 
-in enumerate(
-    shapes(src_arr_tmp, mask=mask, transform=src.transform)))
-
-#Create geopandas Dataframe and save as geojson, ESRI shapefile etc.
-geoms = list(results)
-gpd_polygonized_raster  = gpd.GeoDataFrame.from_features(geoms)
-gpd_polygonized_raster["area"] = gpd_polygonized_raster.geometry.area
-gpd_polygonized_raster = gpd_polygonized_raster.set_crs(4326)
-grid_area = f'{gpd_polygonized_raster.iloc[1].area:.2f}' #'0.01 degree^2' = 100km2 = 100*10^6
-#check
-gpd_polygonized_raster.to_file(os.path.join(out_dir,f"grid_01degree_{PageName}.shp"), crs="epsg:4326")
+""" #0.1 degree gridポリゴンをつくる 
+     use already existed one"""
+     
+outgrid_name =  f"grid_01degree_{PageName}.shp"
+if not os.path.isfile(out_dir + os.sep +outgrid_name):
+    # Generate polygons from the raster data
+    mask = None
+    results = (
+    {'properties': {'raster_val': v}, 'geometry': s}
+    for i, (s, v) 
+    in enumerate(
+        shapes(src_arr_tmp, mask=mask, transform=src.transform)))
+    
+    #Create geopandas Dataframe and save as geojson, ESRI shapefile etc.
+    geoms = list(results)
+    gpd_polygonized_raster  = gpd.GeoDataFrame.from_features(geoms)
+    gpd_polygonized_raster["area"] = gpd_polygonized_raster.geometry.area
+    gpd_polygonized_raster = gpd_polygonized_raster.set_crs(4326)
+    grid_area = f'{gpd_polygonized_raster.iloc[1].area:.2f}' #'0.01 degree^2' = 100km2 = 100*10^6
+    #check
+    gpd_polygonized_raster.to_file(os.path.join(out_dir, outgrid_name), crs="epsg:4326")
+else:
+    gpd_polygonized_raster = gpd.read_file(out_dir + os.sep +outgrid_name)
 
 
 """ # gridポリゴンごとにpalmを含む面積を拾う。 """
@@ -64,7 +70,9 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         meta_palm = src_palm.meta
         kwds = src_palm.profile
         arr_palm = src_palm.read(1).astype('float16')
+        # test = np.ravel(arr_palm).tolist()
         arr_palm[arr_palm==0] = np.nan
+        arr_palm[arr_palm>2030] = np.nan #inf exist
         affine= src.transform
         # meta_palm.update({"dtype":'float16',"nodata":np.nan})
         kwds['dtype'] = 'float32' #float16はダメだった
