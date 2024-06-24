@@ -6,9 +6,6 @@ PCA用にピクセルごとに目的変数と変数を時系列に並べたcsv�
 @author: chihiro
 
 """
-#####
-#8 days meanができた後
-#####
 
 import os
 import glob
@@ -17,9 +14,10 @@ from rasterio.merge import merge
 import numpy as np
 from tqdm import tqdm
 
-in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity'
-out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity/_mosaic'
-
+# in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity'
+# out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity/_mosaic'
+in_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity"
+out_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity\_mosaic"
 
 tifs = glob.glob(in_dir + os.sep + "*.tif")
 periods = [os.path.basename(t[:-4].split("_")[-1]) for t in tifs]
@@ -41,7 +39,7 @@ for p in periods:
         "crs": src.crs
     })
     
-    outfilename = os.path.basename(tifs[0])[3:]
+    outfilename = os.path.basename(tifs_p[0])[3:]
     outfile = out_dir + os.sep + f"mosaic_{outfilename}"
     with rasterio.open(outfile, 'w', **out_meta) as dst:
         dst.write(mosaic)
