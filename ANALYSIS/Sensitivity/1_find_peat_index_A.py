@@ -19,10 +19,10 @@ from rasterstats import zonal_stats
 # import matplotlib.pyplot as plt
 
 PageName = 'A1'
-sample_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_Eb_importance_2002-2012.tif'
-# palm_poly = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\extract_Malaysia\Malaysia_PO_area_fin.shp"
-palm_ras = '/Volumes/PortableSSD/MAlaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif'
-out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index'
+# sample_tif = f'/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01/{PageName}_Eb_importance_2002-2012.tif'
+sample_tif = rf'D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\{PageName}_Eb_importance_2002-2012.tif'
+peat_ras = r'D:\Malaysia\SoilMap\Peat\peat_merge_bool.tif'
+out_dir = os.path.dirname(peat_ras) + os.sep + "peat_index"
 
 src = rasterio.open(sample_tif)
 src_arr = src.read(1)
@@ -30,37 +30,37 @@ h = src_arr.shape[0]
 w = src_arr.shape[1]
 src_arr_tmp = np.arange(h*w).reshape(h, w).astype("int16")
 
-""" #0.1 degree gridポリゴンをつくる """
-# Generate polygons from the raster data
-mask = None
-results = (
-{'properties': {'raster_val': v}, 'geometry': s}
-for i, (s, v) 
-in enumerate(
-    shapes(src_arr_tmp, mask=mask, transform=src.transform)))
+""" #0.1 degree gridポリゴンをつくる 
+     use already existed one"""
+grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+outgrid_name =  f"grid_01degree_{PageName}.shp"
+if not os.path.isfile(grid_dir + os.sep +outgrid_name):
+    # Generate polygons from the raster data
+    mask = None
+    results = (
+    {'properties': {'raster_val': v}, 'geometry': s}
+    for i, (s, v) 
+    in enumerate(
+        shapes(src_arr_tmp, mask=mask, transform=src.transform)))
+    
+    #Create geopandas Dataframe and save as geojson, ESRI shapefile etc.
+    geoms = list(results)
+    gpd_polygonized_raster  = gpd.GeoDataFrame.from_features(geoms)
+    gpd_polygonized_raster["area"] = gpd_polygonized_raster.geometry.area
+    gpd_polygonized_raster = gpd_polygonized_raster.set_crs(4326)
+    grid_area = f'{gpd_polygonized_raster.iloc[1].area:.2f}' #'0.01 degree^2' = 100km2 = 100*10^6
+    #check
+    gpd_polygonized_raster.to_file(os.path.join(grid_dir, outgrid_name), crs="epsg:4326")
+else:
+    gpd_polygonized_raster = gpd.read_file(grid_dir + os.sep +outgrid_name)
 
-#Create geopandas Dataframe and save as geojson, ESRI shapefile etc.
-geoms = list(results)
-gpd_polygonized_raster  = gpd.GeoDataFrame.from_features(geoms)
-gpd_polygonized_raster["area"] = gpd_polygonized_raster.geometry.area
-gpd_polygonized_raster = gpd_polygonized_raster.set_crs(4326)
-grid_area = f'{gpd_polygonized_raster.iloc[1].area:.2f}' #'0.01 degree^2' = 100km2 = 100*10^6
-#check
-gpd_polygonized_raster.to_file(os.path.join(out_dir,f"grid_01degree_{PageName}.shp"), crs="epsg:4326")
 
-
-""" # gridポリゴンごとにpalmを含む面積を拾う。 """
-# gdf_palm = pyogrio.read_dataframe(palm_poly)
-# gdf_palm["area"] = gdf_palm["geometry"].to_crs(32648).area
-# # 微小面積のポリゴンは削除
-# gdf_palm_valid = gdf_palm[gdf_palm["area"]>100000] #10ha以上のpalmを使う
-# #check
-# gdf_palm_valid.to_file(os.path.join(out_dir,"large_palm.shp"), crs="epsg:4326")
-
+""" # gridポリゴンごとにpeatを含む面積を拾う。 """
 ### zonalstatでカウントを拾う
-palmras_name = os.path.basename(palm_ras)[:-4]
+palmras_name = os.path.basename(peat_ras)[:-4]
+
 with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
-    with rasterio.open(palm_ras) as src_palm:
+    with rasterio.open(peat_ras) as src_palm:
         meta_palm = src_palm.meta
         kwds = src_palm.profile
         arr_palm = src_palm.read(1).astype('float16')
@@ -73,15 +73,15 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         with rasterio.open(palmras_nan_name, "w", **kwds) as dst:
             dst.write(arr_palm,1)
 
-#いっかい出さないとだめぽい
-stat_dic = zonal_stats(os.path.join(out_dir,f"grid_01degree_{PageName}.shp"), palmras_nan_name, 
+
+stat_dic = zonal_stats(os.path.join(grid_dir, outgrid_name), palmras_nan_name, 
                        stats="count") #affine=affine
 
-# area_ratioが一定以上のグリッドポリゴンをidxで拾う
+# area_ratioが一定以上のグリッドポリゴンをidxで拾う(ここまでok)
 count_list = []
 for i,d in enumerate(stat_dic):
     for k,co in d.items():
-        area_ratio = co*(100**2) / (100*10**6) #palm 1ピクセル100**2m2, 1グリッド 100*10**6m2
+        area_ratio = co*(500**2) / (100*10**6) #peat 1ピクセル500**2m2, 1グリッド 100*10**6m2
         if area_ratio>0.3:
             count_list.append(i)
 
@@ -95,7 +95,7 @@ target_point["geometry"] = target_point["geometry"].representative_point()
 # target_point.to_file(os.path.join(out_dir,"palm_area_points.shp"))
 
 
-""" # ポイントがある位置の解析ラスターのindexを拾う """
+""" # ポイントがある位置の解析ラスター(=sample tif =importance tif)のindexを拾う """
 ## pick values ###
 locations = target_point.geometry.tolist()
 locations = [(p.xy[0][0],p.xy[1][0]) for p in locations]
@@ -110,7 +110,7 @@ for rc in pixel_indices:
     oned_indx_list.append(index_1d)
     
 #txtで出力
-out_txt = os.path.join(out_dir,f"palm_index_shape_{PageName}.txt")
+out_txt = os.path.join(out_dir,f"peat_index_shape_{PageName}.txt")
 with open(out_txt, "w") as file:
     for idx in oned_indx_list:
         file.write("%s\n" % idx)
