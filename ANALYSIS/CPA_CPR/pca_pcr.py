@@ -18,7 +18,7 @@ import statsmodels.api as sm
 from sklearn.preprocessing import StandardScaler
 
 
-# csvfile = "/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
+# csvfile = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
 # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\0.csv"
 # startyear = 2002
 # endyear = 2012
@@ -40,8 +40,8 @@ def main(csvfile, pval, startyear, endyear):
     # ratio_sm = df_ratio_sm.ratio.values[0]
     # ratio_vod = df_ratio_vod.ratio.values[0]
     
-    pi_e = df_csv[((df_csv.index.year < 2012) & (df_csv.index.month < 11))]
-    pi_2 = df_csv[(df_csv.index.year >= 2012) & (df_csv.index.year < 2023)]
+    pi_e = df_csv.loc[:,["SMDSCE", "VODDSCE"]]
+    pi_2 = df_csv.loc[:,["SMDSC2", "VODDSC2"]]
     # calc median
     pi_e_med = pi_e.median()
     pi_2_med = pi_2.median()
