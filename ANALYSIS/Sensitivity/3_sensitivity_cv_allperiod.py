@@ -19,9 +19,12 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
     rio_crs = CRS.from_epsg(4326)
     proj_crs = CRS.from_user_input(rio_crs)
 
-in_dir_cv = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\1_cv_ras\p_01"
-in_dir_importane = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01"
-out_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity"
+# in_dir_cv = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\1_cv_ras\p_01"
+in_dir_cv = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/1_cv_ras/p_01'
+# in_dir_importane = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01"
+in_dir_importane = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01'
+# out_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity"
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity_allperiod'
 
 PageName_list = ["A1","A2","A3","A4"]
 
@@ -146,7 +149,7 @@ for page in PageName_list:
     
     all_sensitivity_reshape = all_sensitivity_arr.reshape((height, width)) 
     
-    outfile = os.path.join(out_dir,f"{page}_sensitivity_cv_{period_str}.tif")
+    outfile = os.path.join(out_dir,f"{page}_sensitivity_cv_allperiod_{period_str}.tif")
     with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         with rasterio.open(outfile, "w", **profile) as dst:
             dst.write(all_sensitivity_reshape, 1)
