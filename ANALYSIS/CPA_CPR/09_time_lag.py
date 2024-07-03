@@ -8,24 +8,29 @@
 import numpy as np
 from scipy import stats
 import pandas as pd
-import os
+import os,sys
 import glob
 from tqdm import tqdm
 import rasterio
 
 startyear = 2002
 endyear = 2022
-time_lag = 1 #
+
+# time_lag = 1 #
+time_lag = sys.argv[1]
     
 for page in ["A1","A2","A3","A4"]:
     # page = "A1"
-    in_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels\{page}"
-    csv_file_list = glob.glob(in_dir + "\\*.csv")
-    out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\6_time_lag" + os.sep + f"lag_{str(time_lag)}"
+    # in_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels\{page}"
+    in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{page}'
+    csv_file_list = glob.glob(in_dir + os.sep + "*.csv")
+    # out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\6_time_lag" + os.sep + f"lag_{str(time_lag)}"
+    out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/6_time_lag" + os.sep + f"lag_{str(time_lag)}"
     os.makedirs(out_dir, exist_ok=True)
     
     ### time series csvをつくったラスターのどれか
-    sample_tif = r"F:\MAlaysia\SIF\GOSIF\02_tif_age_adjusted\res_01\extent\GOSIF_2000081_extent_adj_res01_extent_A1.tif"
+    # sample_tif = r"F:\MAlaysia\SIF\GOSIF\02_tif_age_adjusted\res_01\extent\GOSIF_2000081_extent_adj_res01_extent_A1.tif"
+    sample_tif = f'/Volumes/PortableSSD/MAlaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/extent/GOSIF_2000081_extent_adj_res01_extent_{page}.tif'
     with rasterio.open(sample_tif) as src:
         src_arr = src.read(1)
         meta = src.meta
@@ -115,7 +120,7 @@ for page in ["A1","A2","A3","A4"]:
             df_valid_varonly = df_valid_reset.drop(["GOSIFz","datetime"], axis=1)
             
             ### shift gosif data set by lag
-            empty_data = [np.nan for _ in range(time_lag)] # [np.nan, np.nan, ...]
+            empty_data = [np.nan for _ in range(int(time_lag))] # [np.nan, np.nan, ...]
             df_empty = pd.DataFrame({"GOSIFz":empty_data})
             
             # concat empty df and laged sif df
