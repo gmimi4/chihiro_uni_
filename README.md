@@ -11,9 +11,9 @@ The followings provide small notes for each code in the steps.
 
 You need DEM for initiating the program
 - _01_Gaussian.py
-You need process DEM with Gausian filter for generating a curvature image.
+  * You need process DEM with Gausian filter for generating a curvature image.
 - _02_Slope_Curvature.py
-Use original DEM for slope image, and Gaussian filtered DEM for curvature image.
+  * Use original DEM for slope image, and Gaussian filtered DEM for curvature image.
 - _03_CSMap_export.py
 
 ## Terrace detection by deep learning (_02_TerraceDetection)
@@ -25,23 +25,23 @@ The followings provide small notes for each code in the steps.
 
 - _00_dilation.py
 - _01_vectorize_centerlines.py
-You need to set the path to arcpy and path to "_01_vectorize_centerlines_arctool.py" in the code.
+  * You need to set the path to arcpy and path to "_01_vectorize_centerlines_arctool.py" in the code.
 - _02_filtering_by_intersects.py
-You can change the angle threshold "angle_thre" (default 45).
+  * You can change the angle threshold "angle_thre" (default 45).
 - _03_cut_intersects.py
-You can change the cut distance "buff_distance" (default 8).
+  * You can change the cut distance "buff_distance" (default 8).
 - _04_cut_intersects_2lines.py
-You can change the cut distance "buff_distance" (default 8).
-You can change the angle threshold "angle_thre" (default 45).
+  * You can change the cut distance "buff_distance" (default 8).
+  * You can change the angle threshold "angle_thre" (default 45).
 - _05_connect_nearlines.py
-You can change the distance threshold "linestring.length" (default 5).
-You can change the angle threshold "angle_thre" (default 45).
+  * You can change the distance threshold "linestring.length" (default 5).
+  * You can change the angle threshold "angle_thre" (default 45).
 - _06_erase_by_roads.py
 - _07_cut_intersects_pairing.py
-You can change the cut distance "buff_distance" (default 1).
+  * You can change the cut distance "buff_distance" (default 1).
 - _08_cut_intersects_2lines_pairing.py
-You can change the cut distance "buff_distance" (default 1).
-You can change the angle threshold "angle_thre" (default 45).
+  * You can change the cut distance "buff_distance" (default 1).
+  * You can change the angle threshold "angle_thre" (default 45).
 - _99_devide_line_roads.py
 - _99_devide_lines.py
 
