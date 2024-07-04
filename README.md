@@ -20,7 +20,7 @@ You need DEM for initiating the program
 This program provides a trained model. However, please note that the trained model still needs improvement.
 You will see insufficient segmentation result by the current model. In such case, you need to train a new model or apply other detection methods.
 
-After terraces were segmented, please run Please run codes in "run_CSimg.py"
+After terraces were segmented, please run Please run codes in "run_terrace_detection.py"
 The followings provide small notes for each code in the steps.
 
 - _00_dilation.py
@@ -45,10 +45,21 @@ The followings provide small notes for each code in the steps.
 - _99_devide_line_roads.py
 - _99_devide_lines.py
 
-run_pairing_terrace.py
-run_point_generation.py
-run_terrace_detection.py
+## Pairing terraces for point generation (_03_PairingTerraces)
+Please run codes in "run_pairing_terrace.py"
 
+- _03_vertical_cut.py
+ * This code cut lines at the endpoints of neighboring lines
+_03_vertical_cut_post.py
+ * This code does the same process as the previous step, especially for lines which have gone after the previous step.
+- _04_paringID.py
+ * This code assign T1 and T2, and then the identical pair numbers for paired terraces.
+ * This process uses the elevation information.
+- _05_paringID_post.py
+ * Assgin the same pairing ID for neighboring and connecting lines
+ * Lines which apart each other are not processed because they produce multilinestrings
+- _06_put_direction.py
+ * This code assign the direction of the area to all lines
 
-_03_PairingTerraces
-_04_Point_generation
+## Point generation (_04_Point_generation)
+Please run codes in "run_point_generation.py"
