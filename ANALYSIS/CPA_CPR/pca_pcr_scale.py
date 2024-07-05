@@ -19,11 +19,9 @@ from sklearn.preprocessing import StandardScaler
 
 
 # csvfile = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
-# csvfile=csv_file_list[15706]
 # csvfile = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels\A1\0.csv"
 # startyear = 2002
 # endyear = 2012
-# pval=0.1
 
 def main(csvfile, pval, startyear, endyear):
     # print(csvfile)
@@ -230,7 +228,7 @@ def main(csvfile, pval, startyear, endyear):
     scaler = StandardScaler()
     X_pca = pca.fit_transform(X_norm)
     # Scalor使ってる: https://scikit-learn.org/stable/auto_examples/cross_decomposition/plot_pcr_vs_pls.html
-    X_pca_scale = scaler.fit_transform(X_pca) #さらにscoreを正規化する -> rev No need. たぶん成分の寄与率が反映されなくなる
+    X_pca_scale = scaler.fit_transform(X_pca) #さらにscoreを正規化する
     
     # # scaleする前のscoreで線形回帰
     # model = Ridge() #線形
@@ -245,27 +243,25 @@ def main(csvfile, pval, startyear, endyear):
     # model.coef_
     
     # # scaleする前のscoreで線形回帰
-    X1 = sm.add_constant(X_pca)
-    model_sm = sm.OLS(Y_norm, X1).fit() #線形
+    # X1 = sm.add_constant(X_pca)
+    # model_sm = sm.OLS(Y_norm, X1).fit() #線形
     # print(model_sm.summary()) #Ridgeとだいたい同じ
     
     # scale後のscoreで線形回帰
-    # X1_scale = sm.add_constant(X_pca_scale)
-    # model_sm_scale = sm.OLS(Y_norm, X1_scale).fit() #線形
+    X1_scale = sm.add_constant(X_pca_scale)
+    model_sm_scale = sm.OLS(Y_norm, X1_scale).fit() #線形
     # print(model_sm_scale.summary()) #Ridgeとだいたい同じ
     
     """# Cal relative importance of variables"""
     
     #論文: we multiplied the loading scores of each variable by the PCR coefficients and summed these scores. This enabled us to estimate the relative importance of each variable
     #各変数においてcoefficientsとPC*ごとのloading(相関を意味する)をかけて、それらをPC*分sumする
-    coefficients_ori = model_sm.params
-    # coefficients_ori = model_sm_scale.params
+    coefficients_ori = model_sm_scale.params
     coefficients = coefficients_ori[1:]
     arr_coef = np.array(coefficients)
     
     # p値が有意なcomponentのcoefみ採用
-    p_list = model_sm.pvalues[1:].tolist()
-    # p_list = model_sm_scale.pvalues[1:].tolist()
+    p_list = model_sm_scale.pvalues[1:].tolist()
     valid_p_idx = [i for i,v in enumerate(p_list) if v < pval] #0.05 #0.1
     
     valid_arr_coef = arr_coef[valid_p_idx]
@@ -283,10 +279,8 @@ def main(csvfile, pval, startyear, endyear):
       importance = arr_importance.sum()
       importance_dic[v] = importance
     
-    importance_dic["r_square"] = model_sm.rsquared_adj
-    importance_dic["p_values"] = model_sm.pvalues[1:].tolist()
-    # importance_dic["r_square"] = model_sm_scale.rsquared_adj
-    # importance_dic["p_values"] = model_sm_scale.pvalues[1:].tolist()
+    importance_dic["r_square"] = model_sm_scale.rsquared_adj
+    importance_dic["p_values"] = model_sm_scale.pvalues[1:].tolist()
     
     ### keyの名前変更
     new_vars = [n[:-1] for n in varzs]
