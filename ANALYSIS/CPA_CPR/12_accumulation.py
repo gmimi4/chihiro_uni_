@@ -47,6 +47,7 @@ for page in ["A1","A2","A3","A4"]:
     """### person correlationをピクセルごとに集計する """
     idx_pearson_dic = {} #pearson and pval for each var at all pixels
     for csvfile in tqdm(csv_file_list):
+        # csvfile = in_dir + os.sep + "15706.csv"
         # csvfile = '/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/14930.csv'
         
         idx = os.path.basename(csvfile)[:-4]
@@ -123,7 +124,7 @@ for page in ["A1","A2","A3","A4"]:
             
             ### accum var data by time
             if time_lag >0:
-                df_vars_accum = df_vars.rolling(time_lag).sum() #min_periods=1
+                df_vars_accum = df_vars.rolling(time_lag+1).sum() #min_periods=1
             else:
                 df_vars_accum = df_vars
             
