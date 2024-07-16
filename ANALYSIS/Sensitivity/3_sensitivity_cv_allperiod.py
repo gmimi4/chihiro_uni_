@@ -21,14 +21,17 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
 
 # in_dir_cv = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\1_cv_ras\p_01"
 in_dir_cv = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/1_cv_ras/p_01'
-# in_dir_importane = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01"
-in_dir_importane = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01'
-# out_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity"
-out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity_allperiod'
+
+in_dir_importane = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/p_01' #no time effects
+# in_dir_importane = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/2_out_ras/timeeffects' #with time effect
+
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity_allperiod' #no time effects
+# out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity_allperiod/timeeffect' #with time effect
 
 PageName_list = ["A1","A2","A3","A4"]
 
-period_str = "2002-2022"
+# period_str = "2002-2022"
+period_str = sys.argv[1]
 
 for page in PageName_list:
     """ # process by PageName"""
