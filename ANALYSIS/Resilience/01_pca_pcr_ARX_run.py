@@ -72,14 +72,14 @@ with rasterio.open(sample_tif) as src:
 meta.update({"nodata":np.nan})
 
 
-use_vars = ["rain","temp","VPD","Et","Eb","SM","VOD", "p_values","r_square"]
+use_vars = ["rain","temp","VPD","Et","Eb","SM","VOD", "p_values","r_square", f"GOSIFt-{time_lag}"]
 
 """### relative importanceをピクセルごとに集計する """
 idx_importance_dic = {}
 for csv_file in tqdm(csv_file_list):
     
     idx = os.path.basename(csv_file)[:-4]
-    # csv_file = "/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
+    # csv_file = "/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
     try:
         relative_importances = _01_pca_pcr_ARX.main(csv_file, p_val, startyear, endyear, time_lag)
     except:
@@ -90,7 +90,7 @@ for csv_file in tqdm(csv_file_list):
 
 """### 変数ごとにラスターに変換 """
 for vari in use_vars:
-    # vari = "rain"
+    # vari = 'GOSIFt-1'
     ras_dic = {}
     for i,imoprtance_dic in idx_importance_dic.items():
         # i=4446

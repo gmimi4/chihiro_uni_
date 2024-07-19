@@ -80,7 +80,7 @@ def main(csvfile, pval, startyear, endyear, time_lag):
     """ # set Yt-1 as variable,　# shift Y:GOSIF by time lag """ 
     ## extract GOSIFz
     df_csv_sif = df_csv_z.loc[:,"GOSIFz"]  
-    df_csv_z['GOSIFz-1'] = df_csv_sif.shift(periods=1)  
+    df_csv_z[f'GOSIFz-{time_lag}'] = df_csv_sif.shift(periods=time_lag)
         
     
     ### nan削除
@@ -273,6 +273,7 @@ def main(csvfile, pval, startyear, endyear, time_lag):
     
     ### keyの名前変更
     new_vars = [n[:-1] for n in varzs]
+    new_vars = [f"GOSIFt-{time_lag}" if x == "GOSIFz-" else x for x in new_vars]
     key_mapping = [[o,n] for o,n in zip(varzs,new_vars)]
     key_mapping_dic = dict(key_mapping)
     importance_dic_fin = {key_mapping_dic.get(old_key, old_key): value for old_key, value in importance_dic.items()}
