@@ -10,36 +10,45 @@ mps: https://zenn.dev/hidetoshi/articles/20220731_pytorch-m1-macbook-gpu
 
 
 import os
+import time
+import copy
+from collections import defaultdict
 import torch
 import shutil
+import pandas as pd
 from skimage import io, transform
 import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
+from torchvision import transforms, utils
 from torch import nn
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm as tqdm
+
 from albumentations import (HorizontalFlip, ShiftScaleRotate, Normalize, Resize, Compose, GaussNoise)
+import cv2
+
+from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
 import torch.nn.functional as F
+from PIL import Image
+from PIL import TiffTags
+from torch import nn
 # import zipfiles
+
 import random
 from natsort import natsorted
 import glob
-import math
+import rasterio
 
 device = torch.device('mps')
 
-# parent_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/04_UNet_road/02_training/SLOPE0R_composit' #SLOPE05m_composit #SLOPE05m_Homo #SLOPE0R_composit
 parent_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 img_dir = os.path.join(parent_dir,'img')
 ano_dir = os.path.join(parent_dir,'anno')
-
-model_dir = os.path.join(parent_dir, "model")
-if not os.path.exists(model_dir):
-    os.makedirs(model_dir)
 
 img_listt = natsorted(glob.glob(os.path.join(img_dir,"*.tif")))
 ano_listt = natsorted(glob.glob(os.path.join(ano_dir,"*.tif")))
@@ -63,8 +72,7 @@ def get_train_transform():
         ])
 
 
-#Datasetクラスの定義 # torch.utils.data.Dataset を継承して自分風にデータ作成
-# 参考: https://qiita.com/tetsuro731/items/d64b9bbb8de6874b7064
+#Datasetクラスの定義
 class LoadDataSet(Dataset):
         def __init__(self,path, transform=None):
             self.path = path
@@ -122,10 +130,13 @@ class LoadDataSet(Dataset):
 
 TRAIN_PATH = parent_dir
 path = TRAIN_PATH
-train_dataset = LoadDataSet(TRAIN_PATH, transform=get_train_transform()) #get_train_transform: Augumentation
+train_dataset = LoadDataSet(TRAIN_PATH, transform=get_train_transform())
 
+model_dir = os.path.join(parent_dir, "model")
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 
-#画像枚数 need run
+#画像枚数を確認します（回す必要あり）
 num_of_sample = train_dataset.__len__()
 
 #入力画像とマスクのデータがどうなっているのか確認してみます。
@@ -148,7 +159,7 @@ def visualize_dataset(n_images, predict=None):
   images = random.sample(range(0, num_of_sample), n_images) #n_imagesは表示したい数, num_of_sampleはファイル数
   # images = random.sample(filenames, n_images) #n_imagesは表示したい数, num_of_sampleはファイル数
   figure, ax = plt.subplots(nrows=len(images), ncols=2, figsize=(5, 8)) #imgesは選定したid
-  # print(images) #ファイル名（.tifなし）リスト
+  print(images) #ファイル名（.tifなし）リスト
   for i in range(0, len(images)):
     img_no = images[i] #idを得る
     image, mask = train_dataset.__getitem__(int(img_no))
@@ -164,19 +175,16 @@ def visualize_dataset(n_images, predict=None):
   plt.show()
   figure.savefig(model_dir + os.sep + "training_imgs.png")
 
-visualize_dataset(5) #print figs
+visualize_dataset(5)
 
 
 
 """ #Training """
 #データの前処理。
-split_ratio = 0.2
+split_ratio = 0.3
 train_size=int(np.round(train_dataset.__len__()*(1 - split_ratio),0))
 valid_size=int(np.round(train_dataset.__len__()*split_ratio,0))
 train_data, valid_data = random_split(train_dataset, [train_size, valid_size])
-
-## Load Data by DataLoader
-## total size is still same as original dataset (669 toka)
 train_loader = DataLoader(dataset=train_data, batch_size=10, shuffle=True) #batch size10 ni shiteru
 val_loader = DataLoader(dataset=valid_data, batch_size=10)
 
@@ -184,7 +192,7 @@ print("Length of train　data: {}".format(len(train_data)))
 print("Length of validation　data: {}".format(len(valid_data)))
 
 #U-Netのモデルの定義
-class UNet(nn.Module): #nn.Modelが親クラス、それをスーパークラスで継承。スーパーにすることで親クラスのinitを継承する
+class UNet(nn.Module):
     def __init__(self, input_channels, output_channels):
         super().__init__()
         # 資料中の『FCN』に当たる部分
@@ -205,8 +213,7 @@ class UNet(nn.Module): #nn.Modelが親クラス、それをスーパークラス
         self.up_pool9 = up_pooling(128, 64)
         self.conv9 = conv_bn_relu(128, 64)
         self.conv10 = nn.Conv2d(64, output_channels, 1)
-        
-        
+
         # nn.init.kaiming_normal_: パラメータの初期化らしい
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -219,23 +226,18 @@ class UNet(nn.Module): #nn.Modelが親クラス、それをスーパークラス
         x = x/255.
 
         # 資料中の『FCN』に当たる部分
-        x1 = self.conv1(x) #64
-        # p1 = ECA(x1) # ECA #not implement in the first
+        x1 = self.conv1(x)
         p1 = self.down_pooling(x1)
-        x2 = self.conv2(p1) #128
-        x2 = ECA(x2)
+        x2 = self.conv2(p1)
         p2 = self.down_pooling(x2)
-        x3 = self.conv3(p2) #256
-        x3 = ECA(x3)
+        x3 = self.conv3(p2)
         p3 = self.down_pooling(x3)
-        x4 = self.conv4(p3) #512
-        x4 = ECA(x4)
+        x4 = self.conv4(p3)
         p4 = self.down_pooling(x4)
-        x5 = self.conv5(p4) #1024 paper mistakes with 512?
+        x5 = self.conv5(p4)
 
         # 資料中の『Up Sampling』に当たる部分, torch.catによりSkip Connectionをしている
         p6 = self.up_pool6(x5)
-        p6 = ECA(p6)
         x6 = torch.cat([p6, x4], dim=1)
         x6 = self.conv6(x6)
 
@@ -256,33 +258,9 @@ class UNet(nn.Module): #nn.Modelが親クラス、それをスーパークラス
 
         return output
 
-
-### ECA from ECA-Net: Efficient Channel Attention for Deep Convolutional Neural Networks
-## need .to('mps')
-def ECA(x, gamma=2, b=1):
-    #x: input features with shape [N, C, H, W]
-    #gamma, b: parameters of mapping function
-    N,C,H,W = x.size()
-    t = int(abs((math.log(C, 2) + b) / gamma))
-    k = t if t%2 else t+1
-    avg_pool = nn.AdaptiveAvgPool2d(1) #average pooling with setting output H x W with the number of features equal to the number of input planes 
-    conv = nn.Conv1d(1, 1, kernel_size=k, padding=int(k/2), bias=False).to('mps') #maybe using same parameter at any channel?? input is dimention1
-    sigmoid = nn.Sigmoid()
-    
-    y = avg_pool(x)
-    y = conv(y.squeeze(-1).transpose(-1,-2)) #original #y.squeeze(-1).transpose(-1,-2).size() -> torch.Size([10, 1, 3])
-    y = y.transpose(-1, -2).unsqueeze(-1)
-    y = sigmoid(y)
-    
-    return x * y.expand_as(x)
-        
-    
-
-
 #畳み込みとバッチ正規化と活性化関数Reluをまとめている
 # nn.Sequentialは「モデルとして組み込む関数を1セットとして順番に実行しますよ」というもの
 # nn.BatchNorm2d: https://jvgd.medium.com/pytorch-batchnorm2d-weights-explained-13705ac21189
-# Convolution とReLUのひとつづきのセット
 def conv_bn_relu(in_channels, out_channels, kernel_size=3, stride=1, padding=1):
     return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
@@ -298,7 +276,7 @@ def down_pooling():
 
 def up_pooling(in_channels, out_channels, kernel_size=2, stride=2):
     return nn.Sequential(
-        #転置畳み込み # とは畳み込みの逆、元に戻す
+        #転置畳み込み
         nn.ConvTranspose2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(inplace=True)
@@ -465,27 +443,22 @@ for epoch in range(num_epochs):
     
     
 #U-Netモデルの性能評価の確認 #by matplotlib
-# import seaborn as sns
+figure, axs = plt.subplots(1, 2, figsize=(15,5))
+ax = axs[0]
+ax.plot(range(1,num_epochs+1), total_train_loss, label="Train Loss")
+ax.plot(range(1,num_epochs+1), total_valid_loss, label="Valid Loss")
+ax.set_title("Loss")
+ax.set_xlabel("epochs")
+ax.set_ylabel("DiceLoss")
 
-plt.figure(1)
-plt.figure(figsize=(15,5))
-# sns.set_style(style="darkgrid")
-plt.subplot(1, 2, 1)
-# sns.lineplot(x=range(1,num_epochs+1), y=total_train_loss, label="Train Loss")
-# sns.lineplot(x=range(1,num_epochs+1), y=total_valid_loss, label="Valid Loss")
-plt.plot(range(1,num_epochs+1), total_train_loss, label="Train Loss")
-plt.plot(range(1,num_epochs+1), total_valid_loss, label="Valid Loss")
-plt.title("Loss")
-plt.xlabel("epochs")
-plt.ylabel("DiceLoss")
 
-plt.subplot(1, 2, 2)
-plt.plot(range(1,num_epochs+1), total_train_score, label="Train Score")
-plt.plot(range(1,num_epochs+1), total_valid_score, label="Valid Score")
-plt.title("Score (IoU)")
-plt.xlabel("epochs")
-plt.ylabel("IoU")
-plt.show()
+ax = axs[1]
+ax.plot(range(1,num_epochs+1), total_train_score, label="Train Score")
+ax.plot(range(1,num_epochs+1), total_valid_score, label="Valid Score")
+ax.set_title("Score (IoU)")
+ax.set_xlabel("epochs")
+ax.set_ylabel("IoU")
+figure.savefig(model_dir + os.sep + "loss.png")
 
 
 #作成したモデルを読み込みます
@@ -517,7 +490,9 @@ def visualize_predict(model, n_images):
     ax[img_no, 2].set_axis_off()
   plt.tight_layout()
   plt.show()
+  figure.savefig(model_dir + os.sep + "results.png")
 
 visualize_predict(model, 6)
+
 
 
