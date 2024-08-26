@@ -26,11 +26,14 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from natsort import natsorted
 from skimage import io, transform
 from albumentations.pytorch import ToTensorV2
+from tqdm import tqdm
+import shutil
 
 device = torch.device('mps')
 
 dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/9.tif'
+model_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
 
 
 ### Dataset loader
@@ -48,9 +51,9 @@ def get_train_transform(size):
          #正規化(こちらの細かい値はalbumentations.augmentations.transforms.Normalizeのデフォルトの値を適用)
          A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
          #水平フリップ（pはフリップする確率）
-         A.HorizontalFlip(p=0.25),
+         A.HorizontalFlip(p=0.5),
          #垂直フリップ
-         A.VerticalFlip(p=0.25),
+         A.VerticalFlip(p=0.5),
          ToTensorV2()
          ])
     
@@ -511,7 +514,7 @@ def train_epoch(model, dataloader):
     losses= []
     for x, y in dataloader:
         optimizer.zero_grad()
-        out = model.forward(x.to(DEVICE))
+        out = model.forward(x.to(DEVICE)) #PyTorchのmodelは、init関数とforword関数を持ちます。
         loss = loss_fn(out, y.to(DEVICE)).to(DEVICE)
         loss.backward()
         optimizer.step()
@@ -519,7 +522,7 @@ def train_epoch(model, dataloader):
     return np.mean(losses)
 
 def validate_epoch(model, dataloader):
-    model.eval()
+    model.eval() #Sets the module in evaluation mode.
     losses = []
     with torch.no_grad():
         for x, y in dataloader:
@@ -542,14 +545,15 @@ def train(model, epochs, min_epochs, early_stop_count):
                 best_valid_loss = valid_loss
                 EARLY_STOP = early_stop_count
             else:
-                EARLY_STOP -= 1
+                # EARLY_STOP -= 1
+                EARLY_STOP = early_stop_count  #not stop
                 if EARLY_STOP <= 0:
                     return train_loss, valid_loss
     return train_loss, valid_loss
 
 # DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DEVICE = device
-model = SwinUNet(size,size,3,BATCH_SIZE,1,3,4).to(DEVICE) #(H, W, ch, C, num_class?, num_blocks=3, patch_size = 4) #ori: 224,224,1,32,1,3,4
+model = SwinUNet(size,size,3,BATCH_SIZE,1,3,4).to(DEVICE) #(H, W, ch, C, batch, num_class?, num_blocks=3, patch_size = 4) #ori: 224,224,1,32,1,3,4
 ## ?? num_class=2 is error (target and input size different error, but num_class=1 can work)
 
 for p in model.parameters():
@@ -561,17 +565,125 @@ loss_fn = nn.BCEWithLogitsLoss()
 
 
 ### Training  ## Need visualization of loss
-train(model, epochs=100, min_epochs=25, early_stop_count=5)
-## ??なぜかepoch 32で止まった
+## Original Medium
+# train(model, epochs=100, min_epochs=25, early_stop_count=5) #
+
+
+
+""" borrow from UNet """
+#IoUのクラスを定義
+class IoU(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(IoU, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+        intersection = (inputs * targets).sum()
+        total = (inputs + targets).sum()
+        union = total - intersection
+
+        IoU = (intersection + smooth)/(union + smooth)
+
+        return IoU
+
+def save_ckp(state, is_best, checkpoint_path, best_model_path):
+    f_path = checkpoint_path
+    torch.save(state, f_path)
+    if is_best:
+        best_fpath = best_model_path
+        shutil.copyfile(f_path, best_fpath)
+    
+### Training save check point
+
+accuracy_metric = IoU()
+num_epochs=100
+valid_loss_min = np.Inf
+
+checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3.pth') #chkpoint_
+best_model_path = os.path.join(model_dir, 'model_Medc3.pth') #bestmodel.pt
+
+
+# early_stop_count = 5
+# min_epochs = 25
+best_valid_loss = float('inf')
+# EARLY_STOP = early_stop_count
+
+total_train_loss = []
+total_train_score = []
+total_valid_loss = []
+total_valid_score = []
+losses_value = 0
+
+for epoch in range(num_epochs):
+  #<---------------トレーニング---------------------->
+    train_loss = []
+    train_score = []
+    valid_loss = []
+    valid_score = []
+    pbar = tqdm(train_loader, desc = 'description')
+    for x, y in pbar:
+      # x_train = torch.autograd.Variable(x).to(device) #UNet
+      y_train = torch.autograd.Variable(y).to(device) #UNet
+      optimizer.zero_grad()
+      out = model.forward(x.to(DEVICE))
+      loss = loss_fn(out, y.to(DEVICE)).to(DEVICE)
+      train_loss.append(loss.item())
+      
+      ## 精度評価
+      score = accuracy_metric(out, y_train)
+      loss.backward()
+      optimizer.step()
+      train_score.append(score.item())
+      pbar.set_description(f"Epoch: {epoch+1}, loss: {losses_value}, IoU: {score}")
+    
+    #<------------Validation------------------------->
+    with torch.no_grad():
+      for image,mask in valid_loader:
+        model.eval()
+        
+        out_val = model.forward(image.to(DEVICE))
+        loss_val = loss_fn(out_val, mask.to(DEVICE)).to(DEVICE)
+        valid_loss.append(loss_val.item())
+        
+        ## 精度評価
+        score = accuracy_metric(out_val, mask.to(DEVICE))
+        valid_score.append(score.item())
+
+    total_train_loss.append(np.mean(train_loss))
+    total_train_score.append(np.mean(train_score))
+    total_valid_loss.append(np.mean(valid_loss))
+    total_valid_score.append(np.mean(valid_score))
+    print(f"Train Loss: {total_train_loss[-1]}, Train IOU: {total_train_score[-1]}")
+    print(f"Valid Loss: {total_valid_loss[-1]}, Valid IOU: {total_valid_score[-1]}")
+
+
+    checkpoint = {
+        'epoch': epoch + 1,
+        'valid_loss_min': total_valid_loss[-1],
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }
+    torch.save(checkpoint, checkpoint_path)
+
+    # 評価データにおいて最高精度のモデルのcheckpointの保存
+    if total_valid_loss[-1] <= valid_loss_min:
+        print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,total_valid_loss[-1]))
+        save_ckp(checkpoint, True, checkpoint_path, best_model_path)
+        valid_loss_min = total_valid_loss[-1]
+
+    print("")
+
+""" """
 
 ### save model # maybe works
-f_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
+# f_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
 # torch.save(model, f_path)
-torch.save({'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss,},
-           f_path)
+# torch.save({'epoch': epoch,
+#             'model_state_dict': model.state_dict(),
+#             'optimizer_state_dict': optimizer.state_dict(),
+#             'loss': loss,},
+#            f_path)
 
 
 ### Visualizing results
@@ -592,7 +704,7 @@ with torch.no_grad():
         out = out.squeeze(0).squeeze(0).cpu()
         ax[i,2].imshow(out) #cmap='gray'
         ax[i,2].set_title('Prediction')
-        ax[i,3].imshow((out>0.02).float(), cmap='gray')
+        ax[i,3].imshow((out>0.022).float(), cmap='gray')
         ax[i,3].set_title('Threshold Prediction')
 plt.show()
 
