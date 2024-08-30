@@ -28,12 +28,18 @@ from skimage import io, transform
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
 import shutil
+from torchvision import transforms
+from PIL import Image
+import rasterio
 
 device = torch.device('mps')
+DEVICE = device
 
 dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
+dataset_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/9.tif'
 model_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
+model_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
 
 
 ### Dataset loader
@@ -600,8 +606,8 @@ accuracy_metric = IoU()
 num_epochs=100
 valid_loss_min = np.Inf
 
-checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3.pth') #chkpoint_
-best_model_path = os.path.join(model_dir, 'model_Medc3.pth') #bestmodel.pt
+checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3_test.pth') #chkpoint_
+best_model_path = os.path.join(model_dir, 'model_Medc3_test.pth') #bestmodel.pt
 
 
 # early_stop_count = 5
@@ -676,15 +682,6 @@ for epoch in range(num_epochs):
 
 """ """
 
-### save model # maybe works
-# f_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
-# torch.save(model, f_path)
-# torch.save({'epoch': epoch,
-#             'model_state_dict': model.state_dict(),
-#             'optimizer_state_dict': optimizer.state_dict(),
-#             'loss': loss,},
-#            f_path)
-
 
 ### Visualizing results
 fig, ax = plt.subplots(3,4, figsize=(10,8))
@@ -704,11 +701,212 @@ with torch.no_grad():
         out = out.squeeze(0).squeeze(0).cpu()
         ax[i,2].imshow(out) #cmap='gray'
         ax[i,2].set_title('Prediction')
-        ax[i,3].imshow((out>0.022).float(), cmap='gray')
+        ax[i,3].imshow((out>0.025).float(), cmap='gray')
         ax[i,3].set_title('Threshold Prediction')
 plt.show()
 
 
+
+
+""" """
+""" Prediction """
 ### Load model test
-model_load = torch.load(f_path)
+best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
+# model_load = torch.load(best_model_path)
+
+input_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/images'
+output_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/OUT_swin'
+
+### Converting without tfw
+input_dir2 = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/imagesTiff'
+
+import glob
+file_list = glob.glob(input_dir2+ "/*.tif")
+
+# for input_path2 in file_list:
+#     with rasterio.open(input_path2) as src:
+#         arr = src.read()
+#         profile = src.profile
+#         transform =  src.transform
+#         filename = os.path.basename(input_path2)
+#         out_path2 = input_dir2 + os.sep + filename
+#         with rasterio.open(out_path2, 'w', **profile) as dst:
+#           dst.write(arr)
+    
+
+
+### Fail DataLoader がtfw拾ってしまう
+def get_predic_transform(size):
+    return A.Compose(
+        [
+          A.Resize(size, size),
+          #正規化(こちらの細かい値はalbumentations.augmentations.transforms.Normalizeのデフォルトの値を適用)
+          A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+
+          ToTensorV2()
+          ])
+
+class LoadPredicDataSet(Dataset):
+        def __init__(self,image_folder, transform=None):
+            self.image_folder = image_folder
+            self.transforms = get_predic_transform(size) #Augumentationで定義した
+
+        # __len__: 組み込み関数？ここでは独自に定義？　https://blog.codecamp.jp/python-class-code
+        def __len__(self):
+            self.image_list =glob.glob(self.image_folder+ "/*.tif")
+            return len(self.image_list)
+
+
+        def __getitem__(self,idx): #idx: indexじゃないとだめぽい
+            image_folder = self.image_folder
+            mask_folder = image_folder #dammy
+            image_path = glob.glob(input_dir2+ "/*.tif")#[idx]
+            # image_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/images/000000000024.tif'
+            # image_path = "/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/8.tif"
+
+            #画像データの取得
+            # img = io.imread(image_path)[:,:,:3].astype('float32') #(64,64,3)
+            img = Image.open(input_path).convert('RGB') 
+            # img = transform.resize(img,(size,size)) #Affine error??
+            img = np.array(img).astype('float32')
+            img = np.resize(img, (size,size,3))
+
+            mask = self.get_mask(mask_folder, size, size, idx).astype('float32')
+
+            augmented = self.transforms(image=img) #mask=mask #is_check_shapes=False
+            img = augmented['image']
+            # mask = augmented['mask']
+            # mask = mask[0].permute(2, 0, 1)
+            # mask = mask.permute(2, 0, 1)
+            # return (img,mask)
+            return img
+        
+        #マスクデータの取得
+        def get_mask(self,mask_folder,IMG_HEIGHT, IMG_WIDTH, idx):
+            mask = np.zeros((IMG_HEIGHT, IMG_WIDTH, 1)) #dtype=np.bool
+            mask_ = os.path.join(self.image_folder,natsorted(os.listdir(mask_folder))[idx]) #dammy
+            # mask_ = io.imread(os.path.join(mask_folder,mask_))
+            mask_ = Image.open(os.path.join(mask_folder,mask_))
+            # mask_ = transform.resize(mask_, (IMG_HEIGHT, IMG_WIDTH)) #(256, 256)にする
+            mask_ = np.array(img).astype('float32')
+            mask_ = np.resize(img, (1, size,size))
+            mask_ = np.expand_dims(mask_,axis=-1) #np.expand_dims指定位置に次元追加（）shapeが変わる
+            mask = np.maximum(mask, mask_)
+
+            return mask
+        
+# #trained model exoecxts input as (Batch_size, 3, H, W) (10,3,256,256)
+preprocess = transforms.Compose([
+    transforms.Resize(size),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    
+])
+
+best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
+# checkpoint_path = model_dir + os.sep + 'chkpoint.pth' #chkpoint_
+# best_model_path =  model_dir + os.sep + 'bestmodel.pth' #bestmodel.pt
+
+
+model = SwinUNet(size,size,3,BATCH_SIZE,1,3,4).to(DEVICE) #seems to need define
+
+
+### Load model
+def load_ckp(checkpoint_fpath, model, optimizer):
+    checkpoint = torch.load(checkpoint_fpath)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    valid_loss_min = checkpoint['valid_loss_min']
+    return model, optimizer, checkpoint['epoch'], valid_loss_min.item()
+
+
+model, optimizer, start_epoch, valid_loss_min = load_ckp(best_model_path, model, optimizer)
+
+
+    
+### Run test1
+for input_path in tqdm(file_list):
+
+  img_org = Image.open(input_path).convert('RGB') 
+  img = preprocess(img_org)   # (3, H, W) -> (1, 3, H, W)
+  img_batch = img.unsqueeze(0)
+
+  # Prediction
+  test_dataloader = DataLoader(img_batch, batch_size= BATCH_SIZE) #,shuffle=True
+  
+  with torch.no_grad():
+      for data in test_dataloader:
+        # data = torch.autograd.Variable(data, volatile=True).to(device)
+        data = data.to(device)
+        o = model(data)
+        out = nn.Sigmoid()(o)
+        tm=out[0][0].data.cpu().numpy() #arrayになる
+      #check
+       # figure, ax = plt.subplots()
+       # ax.imshow(tm, interpolation="nearest", cmap="gray")
+
+  out_path = output_dir + os.sep + os.path.basename(input_path)
+
+  with rasterio.open(input_path) as src:
+      profile = src.profile
+      transform =  src.transform
+
+      profile_new = {
+        'driver': 'GTiff',  # GeoTIFF format
+        'height': profile["height"],  # Number of rows
+        'width': profile["width"],   # Number of columns
+        'count': 1,  # Number of bands (e.g., 1 for grayscale)
+        # 'dtype': profile["dtype"],  # Data type of the array
+        'dtype': "float32",  # Data type of the array
+        'crs': profile["crs"],  # Coordinate Reference System (adjust as needed)
+        'transform': transform  # Spatial transformation
+    }
+
+      with rasterio.open(out_path, 'w', **profile_new) as dst:
+        dst.write(tm,1)
+        
+    
+### Run test2  DataLoader がtfw拾ってしまう -> geotif convert in input_dir2
+### Sigmoid makes positive values
+with torch.no_grad():
+    predic_dataset = LoadPredicDataSet(input_dir2, transform=get_predic_transform(size)) #better augmentation only train?
+    test_dataloader = DataLoader(dataset=predic_dataset, batch_size=BATCH_SIZE)
+    
+    
+    x_og = next(iter(test_dataloader)) #next and inter method employs values one by one #error with tfw
+    x = x_og[0]
+    x = np.transpose(x, (1, 2, 0)) #for imshow
+    ax[i,0].imshow(x.squeeze(0).squeeze(0)) #cmap='gray'
+    ax[i,0].set_title('Image')
+    x_og = x_og.to(DEVICE)
+    out = model(x_og[:1]) #x_og[:1] tensor #maybe this is for the prediction
+    out = nn.Sigmoid()(out)
+    out = out.squeeze(0).squeeze(0).cpu()
+    ax[i,2].imshow(out) #cmap='gray'
+    ax[i,2].set_title('Prediction')
+
+    #check
+     # figure, ax = plt.subplots()
+     # ax.imshow(tm, interpolation="nearest", cmap="gray")
+  
+    out_path = output_dir + os.sep + os.path.basename(input_path)
+  
+    with rasterio.open(input_path) as src:
+        profile = src.profile
+        transform =  src.transform
+  
+        profile_new = {
+          'driver': 'GTiff',  # GeoTIFF format
+          'height': profile["height"],  # Number of rows
+          'width': profile["width"],   # Number of columns
+          'count': 1,  # Number of bands (e.g., 1 for grayscale)
+          # 'dtype': profile["dtype"],  # Data type of the array
+          'dtype': "float32",  # Data type of the array
+          'crs': profile["crs"],  # Coordinate Reference System (adjust as needed)
+          'transform': transform  # Spatial transformation
+      }
+  
+        with rasterio.open(out_path, 'w', **profile_new) as dst:
+          dst.write(tm,1)
+
 
