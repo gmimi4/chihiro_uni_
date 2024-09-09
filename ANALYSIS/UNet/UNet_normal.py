@@ -48,7 +48,7 @@ device = torch.device('mps')
 
 parent_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 img_dir = os.path.join(parent_dir,'img')
-ano_dir = os.path.join(parent_dir,'anno')
+ano_dir = os.path.join(parent_dir,'annoBi')
 
 img_listt = natsorted(glob.glob(os.path.join(img_dir,"*.tif")))
 ano_listt = natsorted(glob.glob(os.path.join(ano_dir,"*.tif")))
@@ -65,9 +65,9 @@ def get_train_transform():
         #正規化(こちらの細かい値はalbumentations.augmentations.transforms.Normalizeのデフォルトの値を適用)
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         #水平フリップ（pはフリップする確率）
-        A.HorizontalFlip(p=0.25),
+        A.HorizontalFlip(p=0.5),
         #垂直フリップ
-        A.VerticalFlip(p=0.25),
+        A.VerticalFlip(p=0.5),
         ToTensorV2()
         ])
 
@@ -78,11 +78,11 @@ class LoadDataSet(Dataset):
             self.path = path
             self.folders = os.listdir(path) #['anno', 'img']
             self.transforms = get_train_transform() #Augumentationで定義した
-            self.image_folder = os.path.join(self.path, self.folders[1])
+            self.image_folder = os.path.join(self.path, 'img')
 
         # __len__: 組み込み関数？ここでは独自に定義？　https://blog.codecamp.jp/python-class-code
         def __len__(self):
-            self.image_folder = os.path.join(self.path, self.folders[1])
+            self.image_folder = os.path.join(self.path, 'img')
             self.image_list =os.listdir(self.image_folder)
             # return len(self.image_folder)
             return len(self.image_list)
@@ -90,8 +90,8 @@ class LoadDataSet(Dataset):
 
         def __getitem__(self,idx): #idx: indexじゃないとだめぽい
             self.folders = os.listdir(self.path) #['img', 'anno']
-            image_folder = os.path.join(self.path, self.folders[0]) #[1]
-            mask_folder = os.path.join(self.path, self.folders[1]) #[0]
+            image_folder = os.path.join(self.path, 'img') #[1]
+            mask_folder = os.path.join(self.path, 'annoBi') #[0]
             image_path = os.path.join(image_folder,natsorted(os.listdir(image_folder))[idx])
             # image_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/04_UNet_road/02_training/SLOPE05m_composit/img/8.tif'
 
@@ -366,8 +366,8 @@ accuracy_metric = IoU()
 num_epochs=100 #84でコラボの使用上限に達した
 valid_loss_min = np.Inf
 
-checkpoint_path = os.path.join(model_dir, 'chkpoint.pth') #chkpoint_
-best_model_path = os.path.join(model_dir, 'bestmodel.pth') #bestmodel.pt
+checkpoint_path = os.path.join(model_dir, 'chkpoint_normal.pth') #chkpoint_
+best_model_path = os.path.join(model_dir, 'bestmodel_normal.pth') #bestmodel.pt
 
 total_train_loss = []
 total_train_score = []
@@ -443,22 +443,27 @@ for epoch in range(num_epochs):
     
     
 #U-Netモデルの性能評価の確認 #by matplotlib
-figure, axs = plt.subplots(1, 2, figsize=(15,5))
-ax = axs[0]
-ax.plot(range(1,num_epochs+1), total_train_loss, label="Train Loss")
-ax.plot(range(1,num_epochs+1), total_valid_loss, label="Valid Loss")
-ax.set_title("Loss")
-ax.set_xlabel("epochs")
-ax.set_ylabel("DiceLoss")
+# import seaborn as sns
 
+plt.figure(1)
+plt.figure(figsize=(15,5))
+# sns.set_style(style="darkgrid")
+plt.subplot(1, 2, 1)
+# sns.lineplot(x=range(1,num_epochs+1), y=total_train_loss, label="Train Loss")
+# sns.lineplot(x=range(1,num_epochs+1), y=total_valid_loss, label="Valid Loss")
+plt.plot(range(1,num_epochs+1), total_train_loss, label="Train Loss")
+plt.plot(range(1,num_epochs+1), total_valid_loss, label="Valid Loss")
+plt.title("Loss")
+plt.xlabel("epochs")
+plt.ylabel("DiceLoss")
 
-ax = axs[1]
-ax.plot(range(1,num_epochs+1), total_train_score, label="Train Score")
-ax.plot(range(1,num_epochs+1), total_valid_score, label="Valid Score")
-ax.set_title("Score (IoU)")
-ax.set_xlabel("epochs")
-ax.set_ylabel("IoU")
-figure.savefig(model_dir + os.sep + "loss.png")
+plt.subplot(1, 2, 2)
+plt.plot(range(1,num_epochs+1), total_train_score, label="Train Score")
+plt.plot(range(1,num_epochs+1), total_valid_score, label="Valid Score")
+plt.title("Score (IoU)")
+plt.xlabel("epochs")
+plt.ylabel("IoU")
+plt.show()
 
 
 #作成したモデルを読み込みます
@@ -490,9 +495,7 @@ def visualize_predict(model, n_images):
     ax[img_no, 2].set_axis_off()
   plt.tight_layout()
   plt.show()
-  figure.savefig(model_dir + os.sep + "results.png")
 
 visualize_predict(model, 6)
-
 
 

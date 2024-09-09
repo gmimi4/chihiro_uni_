@@ -31,16 +31,21 @@ import shutil
 from torchvision import transforms
 from PIL import Image
 import rasterio
+import random
 
 device = torch.device('mps')
 DEVICE = device
 
 dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
-dataset_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
+# dataset_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/9.tif'
 model_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
-model_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
+# model_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
 
+img_dir = os.path.join(dataset_path,'img')
+ano_dir = os.path.join(dataset_path,'annoBi') #Binary
+img_listt = natsorted(glob(os.path.join(img_dir,"*.tif")))
+ano_listt = natsorted(glob(os.path.join(ano_dir,"*.tif")))
 
 ### Dataset loader
 # def load_image(path, size):
@@ -90,11 +95,13 @@ class LoadDataSet(Dataset):
             self.path = path
             self.folders = os.listdir(path) #['anno', 'img']
             self.transforms = get_train_transform(size) #Augumentationで定義した
-            self.image_folder = os.path.join(self.path, self.folders[1])
+            # self.image_folder = os.path.join(self.path, self.folders[1])
+            self.image_folder = os.path.join(self.path, 'img')
 
         # __len__: 組み込み関数？ここでは独自に定義？　https://blog.codecamp.jp/python-class-code
         def __len__(self):
-            self.image_folder = os.path.join(self.path, self.folders[1])
+            # self.image_folder = os.path.join(self.path, self.folders[1])
+            self.image_folder = os.path.join(self.path, 'img')
             self.image_list =os.listdir(self.image_folder)
             # return len(self.image_folder)
             return len(self.image_list)
@@ -102,8 +109,9 @@ class LoadDataSet(Dataset):
 
         def __getitem__(self,idx): #idx: indexじゃないとだめぽい
             self.folders = os.listdir(self.path) #['img', 'anno']
-            image_folder = os.path.join(self.path, self.folders[0]) #[1]
-            mask_folder = os.path.join(self.path, self.folders[1]) #[0]
+            # image_folder = os.path.join(self.path, self.folders[0]) #[1]
+            image_folder = os.path.join(self.path, 'img')
+            mask_folder = os.path.join(self.path, 'annoBi') #[0]
             image_path = os.path.join(image_folder,natsorted(os.listdir(image_folder))[idx])
             # image_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/04_UNet_road/02_training/SLOPE05m_composit/img/8.tif'
 
@@ -143,11 +151,50 @@ class LoadDataSet(Dataset):
 size = 224 #for resize
 
 train_dataset = LoadDataSet(dataset_path, transform=get_train_transform(size)) #better augmentation only train?
+
 num_of_sample = train_dataset.__len__()
 
-BATCH_SIZE = 8
+#入力画像とマスクのデータがどうなっているのか確認してみます。
+def format_image(img):
+    img = np.array(np.transpose(img, (1,2,0)))
+    #下は画像拡張での正規化を元に戻しています
+    mean=np.array((0.485, 0.456, 0.406))
+    std=np.array((0.229, 0.224, 0.225))
+    img  = std * img + mean
+    img = img*255
+    img = img.astype(np.uint8)
+    return img
 
-split_ratio = 0.3
+def format_mask(mask):
+    # mask = np.squeeze(np.transpose(mask, (1,2,0))) #np.squeeze: 引数がなければ配列が1しかない次元を削除
+    mask = np.transpose(mask, (1,2,0))
+    return mask
+
+def visualize_dataset(n_images, predict=None):
+  images = random.sample(range(0, num_of_sample), n_images) #n_imagesは表示したい数, num_of_sampleはファイル数
+  # images = random.sample(filenames, n_images) #n_imagesは表示したい数, num_of_sampleはファイル数
+  figure, ax = plt.subplots(nrows=len(images), ncols=2, figsize=(5, 8)) #imgesは選定したimg id
+  print(images) #ファイル名（.tifなし）リスト
+  for i in range(0, len(images)):
+    img_no = images[i] #選定したimg idを得る
+    image, mask = train_dataset.__getitem__(int(img_no))
+    image = format_image(image)
+    mask = format_mask(mask)
+    ax[i, 0].imshow(image)
+    ax[i, 1].imshow(mask, interpolation="nearest", cmap="gray")
+    ax[i, 0].set_title("Input Image")
+    ax[i, 1].set_title("Label Mask")
+    ax[i, 0].set_axis_off()
+    ax[i, 1].set_axis_off()
+  plt.tight_layout()
+  plt.show()
+  # figure.savefig(model_dir + os.sep + "training_imgs.png")
+
+visualize_dataset(5)
+
+BATCH_SIZE = 12
+
+split_ratio = 0.2
 train_size=int(np.round(train_dataset.__len__()*(1 - split_ratio),0))
 valid_size=int(np.round(train_dataset.__len__()*split_ratio,0))
 train_data, valid_data = random_split(train_dataset, [train_size, valid_size])
@@ -489,7 +536,7 @@ class Decoder(nn.Module):
     
     
 class SwinUNet(nn.Module):
-    def __init__(self, H, W, ch, C, num_class, num_blocks=3, patch_size = 4):
+    def __init__(self, H, W, ch, C, num_class, num_blocks=3, patch_size = 4): #num_class=1000 in ori code
         super().__init__()
         self.patch_embed = PatchEmbedding(ch, C, patch_size) #(self, in_ch, num_feat, patch_size)
         self.encoder = Encoder(C, (H//patch_size, W//patch_size),num_blocks)
@@ -559,7 +606,8 @@ def train(model, epochs, min_epochs, early_stop_count):
 
 # DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DEVICE = device
-model = SwinUNet(size,size,3,BATCH_SIZE,1,3,4).to(DEVICE) #(H, W, ch, C, batch, num_class?, num_blocks=3, patch_size = 4) #ori: 224,224,1,32,1,3,4
+numclss = 1 #1000 in ori code
+model = SwinUNet(size,size,3,BATCH_SIZE,numclss,3,4).to(DEVICE) #(H, W, ch, C, batch, num_class?, num_blocks=3, patch_size = 4) #ori: 224,224,1,32,1,3,4
 ## ?? num_class=2 is error (target and input size different error, but num_class=1 can work)
 
 for p in model.parameters():
@@ -606,8 +654,8 @@ accuracy_metric = IoU()
 num_epochs=100
 valid_loss_min = np.Inf
 
-checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3_test.pth') #chkpoint_
-best_model_path = os.path.join(model_dir, 'model_Medc3_test.pth') #bestmodel.pt
+checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3_Bi.pth') #chkpoint_
+best_model_path = os.path.join(model_dir, 'model_Medc3_Bi.pth') #bestmodel.pt
 
 
 # early_stop_count = 5
@@ -668,7 +716,8 @@ for epoch in range(num_epochs):
         'epoch': epoch + 1,
         'valid_loss_min': total_valid_loss[-1],
         'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict()
+        'optimizer': optimizer.state_dict(),
+        'valid_score': total_valid_score[-1]
     }
     torch.save(checkpoint, checkpoint_path)
 
@@ -711,17 +760,18 @@ plt.show()
 """ """
 """ Prediction """
 ### Load model test
-best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
+# best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
 # model_load = torch.load(best_model_path)
 
-input_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/images'
-output_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/OUT_swin'
+# input_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/images'
+# output_dir = '/Volumes/PortableSSD/MAlaysia/01_Blueprint/Pegah_san/03_UNet/OUT_swin'
+output_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/OUT_swinBi'
 
 ### Converting without tfw
-input_dir2 = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/imagesTiff'
+input_dir2 = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/imagesTiff'
 
 import glob
-file_list = glob.glob(input_dir2+ "/*.tif")
+file_list = glob.glob(input_dir2+ os.sep +"*.tif")
 
 # for input_path2 in file_list:
 #     with rasterio.open(input_path2) as src:
@@ -802,10 +852,6 @@ preprocess = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     
 ])
-
-best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
-# checkpoint_path = model_dir + os.sep + 'chkpoint.pth' #chkpoint_
-# best_model_path =  model_dir + os.sep + 'bestmodel.pth' #bestmodel.pt
 
 
 model = SwinUNet(size,size,3,BATCH_SIZE,1,3,4).to(DEVICE) #seems to need define
