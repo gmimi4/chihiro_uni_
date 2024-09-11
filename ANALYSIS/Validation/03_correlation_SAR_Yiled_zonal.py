@@ -8,7 +8,7 @@ import geopandas as gpd
 import numpy as np
 import rasterio
 import rasterio.mask
-# from rasterstats import zonal_stats
+from rasterstats import zonal_stats
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -26,11 +26,11 @@ shp_indone = "/Volumes/PortableSSD/Malaysia/AOI/Administration/Indonesia/idn_adm
 shp_raster_grid = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/_preparation/target_grid_PALSAR_1deg.shp"
 
 palm_tif ="/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif"
-out_dir = "/Volumes/SSD_2/Malaysia/Validation/3_correlation"
+out_dir = "/Volumes/SSD_2/Malaysia/Validation/3_correlation/zonal"
        
 in_tif_dir = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/01_res100m"
-# in_tif_dir = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/02_HH-HV_res100m"
-band = "HV"
+in_tif_dir = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/02_HH-HV_res100m"
+band = "HH-HV"
 tifs = glob.glob(in_tif_dir + os.sep + f"*{band}*.tif")    
 
 """ prepare Yield df"""
@@ -86,13 +86,15 @@ def cal_palsar_mean(gdf_country, namecolumn):
     region_mean_results = {}
     for i,row in tqdm(gdf_country.iterrows()): #gdf_malay
         print("num of regions: ",len(gdf_country))
+        # i = 15
+        # row = gdf_country.loc[i]
         regi_poly = row.geometry
-        gdf_regi = gpd.GeoDataFrame({"geometry":[regi_poly]}).set_crs(gdf_country.crs)
+        gdf_regi = gpd.GeoDataFrame({"geometry":[regi_poly]}).set_crs(gdf_country.crs) #multipolygon
         # regi_polys = gdf_regi.explode(index_parts=True) #Multipoly to polygons
         regi_name = row[namecolumn] #.NAME_1
         if regi_name =='Trengganu': #shp name wrong?
             regi_name = 'Terengganu' 
-            
+        
         
         """ # select target grids"""
         ## grids which intersect with region polygon
@@ -103,86 +105,30 @@ def cal_palsar_mean(gdf_country, namecolumn):
         tar_name = [f"_{str(t)}_res100.tif" for t in tar_name]
         tar_tifs = [t for t in tifs if "_" + os.path.basename(t).split("_")[-2] + "_res100.tif" in tar_name]
         
-        
         region_means_yr = {}
         ### Select year ###
         for yer in year_list_indone:
             tar_tifs_yr = [t for t in tar_tifs if f"_{yer}_" in t]
     
-            # region_grid_means = []
-            region_grid_arr = []
+            region_grid_means = []
             for tat in tar_tifs_yr: #same year in a polygon
-                use_grid_id = os.path.basename(tat)[:-4].split("_")[-2]
-                use_grid = gdf_grid.loc[int(use_grid_id),:]
-                gdf_use_grid = gpd.GeoDataFrame({"geometry":[use_grid.geometry]}).set_crs(gdf_grid.crs)
-            
-                # """ # just for check: mask palm raster by regions"""
-                # try: #error if regi shape not fully overlap with palm raster (only Aceh?)
-                #     mask_palm, transform_palm = rasterio.mask.mask(src_palm, [regi_poly], crop=True) #iterable poly
-                #     ## check if no palm exists (only 0 or 65535)
-                #     mask_palm_check = np.where((mask_palm != 0) &(mask_palm != 65535))
-                #     mask_palm_check = np.ravel(mask_palm_check)
-                # except:
-                #     continue #go to next grid tif
-
-                # if len(mask_palm_check) ==0:
-                #     continue #go to next grid tif
-                # else:
-                """ # mask rasters by region"""
-                ### clip region by grid ###
-                gdf_regi_clip = gpd.clip(gdf_regi, gdf_use_grid)
+        
+                """ ## zonal stat grid by polygon """
+                grid_mean = zonal_stats(regi_poly, tat, stats="mean")
+                region_grid_means.append(grid_mean[0]["mean"])
                 
                 
-                """ # mask rasters by clipped region in a gird"""
-                ## mask palsar and palm by grid (want raster index) #need same shape
-                # mask palsar by 
-                with rasterio.open(tat) as src: #palsar
-                    mask_palsar, transform_palsar = rasterio.mask.mask(src, [gdf_regi_clip.geometry[0]], crop=True) #[use_grid.geometry]
-                    
-                # mask palm by grid
-                mask_palm2, transform_palm2 = rasterio.mask.mask(src_palm, [gdf_regi_clip.geometry[0]], crop=True) #[use_grid.geometry]
-                
-                ### allign the smallest shape
-                smallest_shape = (min([mask_palsar.shape[1],mask_palm2.shape[1]]), min([mask_palsar.shape[2],mask_palm2.shape[2]]))
-                diff_shape_palsar = [mask_palsar.shape[1]-smallest_shape[0], mask_palsar.shape[2]-smallest_shape[1]]
-                diff_shape_palm = [mask_palm2.shape[1]-smallest_shape[0], mask_palm2.shape[2]-smallest_shape[1]]
-                
-                def allign_shape(arr, shapelist):
-                    if sum(shapelist)>0:
-                        arr_del = np.delete(arr, slice(0, shapelist[0]), 0)
-                        arr_del = np.delete(arr_del, slice(0, shapelist[1]), 1)
-                    else:
-                        arr_del = arr
-                    return arr_del
-                
-                mask_palsar_cut = allign_shape(mask_palsar[0], diff_shape_palsar)
-                mask_palm_cut = allign_shape(mask_palm2[0], diff_shape_palm)
-                        
-                            
-                """ ## collect palm valid index #above planting year """
-                palm2_index = np.where((mask_palm_cut !=0)&(mask_palm_cut !=65535)&(mask_palm_cut <int(yer))) #
-                
-                ## collect palsar vals on palms
-                mask_palsar_palm = mask_palsar_cut[palm2_index]
-                mask_palsar_palm = np.where(mask_palsar_palm ==0,np.nan, mask_palsar_palm)
-                # mask_palsar_palm_gamma = 10*np.log10((mask_palsar_palm**2)) -83.0# γ₀ = 10log₁₀(DN²) - 83.0 dB
-
-                # ## calc mean
-                # mask_palsar_palm_gamma = np.where(mask_palsar_palm_gamma !=-np.inf, mask_palsar_palm_gamma, np.nan)
-                # mask_palsar_mean = np.nanmean(mask_palsar_palm_gamma) # meam of grid*
-                
-                region_grid_arr.append(mask_palsar_palm) #array in grid* in year*
-                
-                
-            ### calc mean by year ###
-            region_grid_arr_flat = [value for arr in region_grid_arr for value in arr]
-            region_grid_means = [n for n in region_grid_arr_flat if not np.isnan(n)]
+            ## calc alll mean within polygon
             if len(region_grid_means)>0:
-                yr_mean = statistics.mean(region_grid_means) #mean of all grids in a year*
+                region_grid_means_clean = [m for m in region_grid_means if not (np.isnan(m)|(m==np.inf))]
+                region_grid_means_all = statistics.mean(region_grid_means_clean) # meam of grid*
             else:
-                yr_mean = np.nan
+                region_grid_means_all = np.nan
+                
             
-            yr_mean = 10*math.log10((yr_mean**2)) -83.0# γ₀ = 10log₁₀(DN²) - 83.0 dB
+            ### cinvert ti dB ###
+            yr_mean = 10*math.log10((region_grid_means_all**2)) -83.0# γ₀ = 10log₁₀(DN²) - 83.0 dB
+
             # add year mean of the year to dic     
             region_means_yr[yer] = yr_mean
                        
