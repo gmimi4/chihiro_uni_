@@ -27,9 +27,9 @@ shp_raster_grid = r"D:\Malaysia\Validation\2_PALSAR_mosaic\_preparation\target_g
 palm_tif =r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\\GlobalOilPalm_OP-YoP_mosaic100m.tif"
 out_dir = r"D:\Malaysia\Validation\3_correlation"
        
-in_tif_dir = r"D:\Malaysia\Validation\2_PALSAR_mosaic\01_res100m"
-# in_tif_dir = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/02_HH-HV_res100m"
-band = "HH"
+# in_tif_dir = r"D:\Malaysia\Validation\2_PALSAR_mosaic\01_res100m"
+in_tif_dir = r"D:\Malaysia\Validation\2_PALSAR_mosaic\02_HHtoHV_res100m"
+band = "HHtoHV"
 tifs = glob.glob(in_tif_dir + os.sep + f"*{band}*.tif")
 
 
@@ -204,7 +204,7 @@ def cal_palsar_mean(gdf_country, namecolumn):
             else:
                 yr_mean = np.nan
             
-            yr_mean = 10*math.log10((yr_mean**2)) -83.0# γ₀ = 10log₁₀(DN²) - 83.0 dB
+            # yr_mean = 10*math.log10((yr_mean**2)) -83.0# γ₀ = 10log₁₀(DN²) - 83.0 dB
             # add year mean of the year to dic     
             region_means_yr[yer] = yr_mean
                        
