@@ -19,16 +19,16 @@ import numpy as np
 import statistics
 import math
 
-yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
-yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
-shp_malay = r"F:\MAlaysia\AOI\Administration\Malaysia\States.shp"
-shp_indone = r"F:\MAlaysia\AOI\Administration\Indonesia\idn_admbnda_Provinces_20200401.shp"
-shp_raster_grid = r"D:\Malaysia\Validation\2_PALSAR_mosaic\_preparation\target_grid_PALSAR_1deg.shp"
-palm_tif =r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\\GlobalOilPalm_OP-YoP_mosaic100m.tif"
-out_dir = r"D:\Malaysia\Validation\3_correlation"
+yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
+yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
+shp_malay = "/Volumes/PortableSSD 1/MAlaysia/AOI/Administration/Malaysia/States.shp"
+shp_indone = "/Volumes/PortableSSD 1/MAlaysia/AOI/Administration/Indonesia/idn_admbnda_Provinces_20200401.shp"
+shp_raster_grid = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/_preparation/target_grid_PALSAR_1deg.shp"
+palm_tif ="/Volumes/PortableSSD 1/MAlaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif"
+out_dir = "/Volumes/SSD_2/Malaysia/Validation/3_correlation"
        
 # in_tif_dir = r"D:\Malaysia\Validation\2_PALSAR_mosaic\01_res100m"
-in_tif_dir = r"D:\Malaysia\Validation\2_PALSAR_mosaic\02_HHtoHV_res100m"
+in_tif_dir = "/Volumes/SSD_2/Malaysia/Validation/2_PALSAR_mosaic/02_HHtoHV_res100m"
 band = "HHtoHV"
 tifs = glob.glob(in_tif_dir + os.sep + f"*{band}*.tif")
 
@@ -256,30 +256,44 @@ df_comparison = df_comparison.dropna(how='any')
 """ # Comparison by a liner plotting"""
 ## regression line
 mod = LinearRegression()
-df_x = df_comparison[["yields"]]
+df_x = df_comparison[["yields"]] #better looking
 df_y = df_comparison[["palsar"]]
+# df_x = df_comparison[["palsar"]]
+# df_y = df_comparison[["yields"]]
 mod_lin = mod.fit(df_x, df_y)
 y_predict = mod_lin.predict(df_x)
 r2_lin = mod.score(df_x, df_y)
 #RMSE計算
 x_val = df_comparison['yields']
 y_val = df_comparison['palsar']
+# x_val = df_comparison['palsar']
+# y_val = df_comparison['yields']
 rmse = np.sqrt(mean_squared_error(x_val, y_val))
 #Pearson Correlation Coefficient #https://realpython.com/numpy-scipy-pandas-correlation-python/#pearson-correlation-numpy-and-scipy-implementation
 r, p = scipy.stats.pearsonr(x_val, y_val)
+# Get coefficients
+a = mod.coef_[0][0]  # Slope (a)
+b = mod.intercept_[0]  # Intercept (b)
 
 fig = plt.figure()
-ax = fig.add_subplot(111, xlabel="Yield[ton/ha]", ylabel="PALSAR[dB]", title = f"{band}")
+ax = fig.add_subplot(111, xlabel="Yield[ton/ha]", ylabel="PALSAR HH/HV", title = f"{band}") #xlabel="PALSAR HH/HV", ylabel="Yield[ton/ha]"
 
 scatter = ax.scatter(x_val, y_val) #c="dodgerblue"
 # plt.xlim(200,x_max)
 # plt.ylim(200,y_max)
 ax.text(0.7,0.1,'$ r $=' + str(round(r, 4)),fontsize=14, transform=ax.transAxes)
 # ax.text(0.7,0.2,'$ RMSE $=' + str(round(rmse, 4)),fontsize=14, transform=ax.transAxes)
+ax.text(0.7,0.2,'$ p $=' + str(round(p, 8)),fontsize=14, transform=ax.transAxes)
+ax.text(0.1,0.9,'$ y $=' + str(round(a, 4))+ "x +" +  str(round(b, 4)),fontsize=14, transform=ax.transAxes)
 ax.plot(df_x, y_predict, color = 'red', linewidth=0.5)
         
 fig.savefig(os.path.join(out_dir, f"correlation_{band}.png"), dpi=300)
 plt.close()
+
+#export a,b
+coef_dic = {"a":[a], "b":[b]}
+df_coef = pd.DataFrame.from_dict(coef_dic)
+df_coef.to_csv(out_dir + os.sep + f"coef_{band}.txt")
 
 src_palm.close()
     
