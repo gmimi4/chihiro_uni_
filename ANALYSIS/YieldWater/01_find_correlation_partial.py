@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Correlation with annual yield and vars with time lag
+ファイルがあると出力しないので適宜直して！
 """
 import os
 import pandas as pd
@@ -19,19 +20,29 @@ import matplotlib.pyplot as plt
 import glob
 from statistics import mean
 import pingouin as pg
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _csv_to_dataframe   
 
-yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
-yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
+# yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
+
+yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
+yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
 shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
-    
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_partial"    
 
 """ prepare Yield df"""
 df_malay = pd.read_csv(yield_csv_malay, index_col=0)
@@ -252,7 +263,8 @@ def calc_peason(df_csv_): ## partial correlation
         df_pearson_all.columns=[tarvar] #name column
         df_pearson_all_abs = df_pearson_all.abs()
         
-        pearsonvar[tarvar] = df_pearson_all_abs #input abs
+        # pearsonvar[tarvar] = df_pearson_all_abs #input abs
+        pearsonvar[tarvar] = df_pearson_all #with sign
         
     return pearsonvar #dict of peasons for vars in one csv
 
@@ -271,6 +283,7 @@ for i, row in tqdm(gdf_region.iterrows()):
     # row = gdf_region.loc[i]
     regipoly = row.geometry
     reginame = row.Name
+    print(reginame)
     regioname_fin = reginame.replace(" ","")
     ## pass if no data region
     if reginame in nondata_region:
@@ -346,7 +359,7 @@ for i, row in tqdm(gdf_region.iterrows()):
                   'VPD':"hPa", 'Et':"mm/day", 'Eb':"mm/day", 'SM':"m3/m3", 'VOD':""}
         
         
-        fig,axes = plt.subplots(4,2, figsize=(100, 20))
+        fig,axes = plt.subplots(4,2, figsize=(8, 8))
         fig.subplots_adjust(hspace=0.5)  
         for i,var in enumerate(varlist):
             row, col = divmod(i, 2)
@@ -358,7 +371,7 @@ for i, row in tqdm(gdf_region.iterrows()):
             ax.tick_params(axis='y', labelsize=10)
             ax.set_ylabel(f"{var}", fontsize = 12)
             ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
-            ax.set_ylim(0,1)
+            ax.set_ylim(-1,1) #(0,1)
             # if i == len(varlist)-1:
             # if (row ==1&col==0)or(row ==2&col==1):
             # if i==6 or i==7: #諦め
@@ -384,53 +397,46 @@ for i, row in tqdm(gdf_region.iterrows()):
         
         
 # """ # ミスってplot from csv"""
-# csv_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
-# csvs = glob.glob(csv_dir + os.sep + "*_abs.csv")
-# csvs_std = glob.glob(csv_dir + os.sep + "*_stdabs.csv")
+csv_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_partial"
+csvs = glob.glob(csv_dir + os.sep + "*_abs.csv")
+csvs_std = glob.glob(csv_dir + os.sep + "*_stdabs.csv")
 
-# varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF', 
+varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF', 
 
-# for csvf in csvs:
-#     reginame = os.path.basename(csvf)[:-4].split("_")[1]
-#     std_file = [f for f in csvs_std if reginame in f][0]
-#     df_mean = pd.read_csv(csvf, index_col=0)
-#     df_std = pd.read_csv(std_file, index_col=0)
+for csvf in csvs:
+    reginame = os.path.basename(csvf)[:-4].split("_")[1]
+    std_file = [f for f in csvs_std if reginame in f][0]
+    df_mean = pd.read_csv(csvf, index_col=0)
+    df_std = pd.read_csv(std_file, index_col=0)
     
-#     fig,axes = plt.subplots(4,2, figsize=(20, 10))
-#     fig.subplots_adjust(hspace=0.5)  
-#     for i,var in enumerate(varlist):
-#         row, col = divmod(i, 2)
-#         ax = axes[row, col]
-#         # ax = axes[i]
-#         ax.errorbar(df_mean.index, df_mean[var].values, 
-#                     yerr=df_std[f"{var}"].values, color='blue', ecolor="lightgrey",
-#                     label = f"{var}",  fmt='-o', capsize=1)
-#         ax.tick_params(axis='y', labelsize=10)
-#         ax.set_ylabel(f"{var}", fontsize = 12)
-#         ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
-#         ax.set_ylim(0,1)
-#         # if i == len(varlist)-1:
-#         # if (row ==1&col==0)or(row ==2&col==1):
-#         # if i==6 or i==7: #諦め
-#         ax.tick_params(axis='x', labelsize=10)
-#         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-#         # else:
-#         #     ax.tick_params(axis='x', labelsize=0)
-#         if (row ==3)&(col==1):
-#             fig.delaxes(ax)
-#             # ax.set_visible(False)
-#             # for spine in ax.spines.values():
-#             #     spine.set_visible(False)
-#         if i ==0:
-#             ax.set_title(f"{reginame} partial correlaton")
-#         # fig.delaxes(axes[3,1])
-#     axes[3, 1].set_axis_off()
-#     plt.tight_layout()
-#     ### Export fig
-#     out_dir_fig = out_dir + os.sep + "_png"
-#     os.makedirs(out_dir_fig, exist_ok=True)
-#     fig.savefig(out_dir_fig + os.sep + f"{reginame}_partial.png")
-#     plt.close()
+    fig,axes = plt.subplots(4,2, figsize=(20, 10))
+    fig.subplots_adjust(hspace=0.5)  
+    for i,var in enumerate(varlist):
+        row, col = divmod(i, 2)
+        ax = axes[row, col]
+        # ax = axes[i]
+        ax.errorbar(df_mean.index, df_mean[var].values, 
+                    yerr=df_std[f"{var}"].values, color='blue', ecolor="lightgrey",
+                    fmt='-o', capsize=1) #label = f"{var}",
+        ax.tick_params(axis='y', labelsize=10)
+        ax.set_ylabel(f"{var}", fontsize = 12)
+        # ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
+        ax.set_ylim(-1,1)
+        ax.axhline(y=0,color='grey', linewidth=0.7)
+        ax.tick_params(axis='x', labelsize=10)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+        if (row ==3)&(col==1):
+            fig.delaxes(ax)
+        if i ==0:
+            ax.set_title(f"{reginame} partial correlaton")
+        # fig.delaxes(axes[3,1])
+    axes[3, 1].set_axis_off()
+    plt.tight_layout()
+    ### Export fig
+    out_dir_fig = out_dir + os.sep + "_png"
+    os.makedirs(out_dir_fig, exist_ok=True)
+    fig.savefig(out_dir_fig + os.sep + f"{reginame}_partial.png")
+    plt.close()
     
     
 
