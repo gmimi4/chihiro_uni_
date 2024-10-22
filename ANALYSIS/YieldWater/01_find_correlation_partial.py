@@ -112,6 +112,7 @@ for i, row in df_yield.iterrows():
 
 
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region + ['Maluku Utara'] #easy debug
 
 """ set year list"""
 year_list = [y for y in range(2002,2024,1)]
@@ -192,7 +193,7 @@ def calc_peason(df_csv_): ## partial correlation
             """ preprare dataset for partial for specific month """
             for var in varlist:
                 # rows in same months
-                df_csv_m = df_csv[df_csv.index.month == int(mon)]
+                df_csv_m = df_csv_[df_csv_.index.month == int(mon)]
                 
                 """ yield and var set for years """
                 yield_var_m = {} #list for a specific month for peason
@@ -283,7 +284,6 @@ for i, row in tqdm(gdf_region.iterrows()):
     # row = gdf_region.loc[i]
     regipoly = row.geometry
     reginame = row.Name
-    print(reginame)
     regioname_fin = reginame.replace(" ","")
     ## pass if no data region
     if reginame in nondata_region:
@@ -293,7 +293,9 @@ for i, row in tqdm(gdf_region.iterrows()):
         if os.path.isfile(check):
             continue
         else:
+            # print("notyet")
             """ get annual Yield"""
+            print(reginame)
             df_yield_region = df_yield_z.loc[reginame,:]
             df_yield_region = df_yield_region.dropna()
             years_region = df_yield_region.index.tolist()
@@ -344,56 +346,56 @@ for i, row in tqdm(gdf_region.iterrows()):
                 # os.makedirs(out_dir_fig, exist_ok=True)
                 # fig.savefig(out_dir_fig + os.sep + f"partial_{regioname_fin}_{var}.png")
                 # plt.close()
-    
-                    
+        
+                        
             ### concat and Export csv
             df_peason_region_mean = pd.DataFrame.from_dict(peason_pixels_vars_mean)
             df_peason_region_mean.to_csv(out_dir + os.sep + f"partial_{regioname_fin}_abs.csv")
             ## std
             df_peason_region_std = pd.DataFrame.from_dict(peason_pixels_vars_std)
             df_peason_region_std.to_csv(out_dir + os.sep + f"partial_{regioname_fin}_stdabs.csv")
-    
-        """ # Plot"""
-        # x_label = list(month_calendar.values())
-        units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
-                  'VPD':"hPa", 'Et':"mm/day", 'Eb':"mm/day", 'SM':"m3/m3", 'VOD':""}
         
-        
-        fig,axes = plt.subplots(4,2, figsize=(8, 8))
-        fig.subplots_adjust(hspace=0.5)  
-        for i,var in enumerate(varlist):
-            row, col = divmod(i, 2)
-            ax = axes[row, col]
-            # ax = axes[i]
-            ax.errorbar(df_peason_region_mean.index, df_peason_region_mean[var].values, 
-                        yerr=df_peason_region_std[f"{var}"].values, color='blue', ecolor="lightgrey",
-                        label = f"{var}",  fmt='-o', capsize=1)
-            ax.tick_params(axis='y', labelsize=10)
-            ax.set_ylabel(f"{var}", fontsize = 12)
-            ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
-            ax.set_ylim(-1,1) #(0,1)
-            # if i == len(varlist)-1:
-            # if (row ==1&col==0)or(row ==2&col==1):
-            # if i==6 or i==7: #諦め
-            ax.tick_params(axis='x', labelsize=10)
-            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-            # else:
-            #     ax.tick_params(axis='x', labelsize=0)
-            if (row ==3)&(col==1):
-                fig.delaxes(ax)
-                # ax.set_visible(False)
-                # for spine in ax.spines.values():
-                #     spine.set_visible(False)
-            if i ==0:
-                ax.set_title(f"{reginame} partial correlaton")
-            # fig.delaxes(axes[3,1])
-        axes[3, 1].set_axis_off()
-        plt.tight_layout()
-        ### Export fig
-        out_dir_fig = out_dir + os.sep + "_png"
-        os.makedirs(out_dir_fig, exist_ok=True)
-        fig.savefig(out_dir_fig + os.sep + f"{regioname_fin}_partial.png")
-        plt.close()
+            """ # Plot"""
+            # x_label = list(month_calendar.values())
+            units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
+                      'VPD':"hPa", 'Et':"mm/day", 'Eb':"mm/day", 'SM':"m3/m3", 'VOD':""}
+            
+            
+            fig,axes = plt.subplots(4,2, figsize=(8, 8))
+            fig.subplots_adjust(hspace=0.5)  
+            for i,var in enumerate(varlist):
+                row, col = divmod(i, 2)
+                ax = axes[row, col]
+                # ax = axes[i]
+                ax.errorbar(df_peason_region_mean.index, df_peason_region_mean[var].values, 
+                            yerr=df_peason_region_std[f"{var}"].values, color='blue', ecolor="lightgrey",
+                            label = f"{var}",  fmt='-o', capsize=1)
+                ax.tick_params(axis='y', labelsize=10)
+                ax.set_ylabel(f"{var}", fontsize = 12)
+                ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
+                ax.set_ylim(-1,1) #(0,1)
+                # if i == len(varlist)-1:
+                # if (row ==1&col==0)or(row ==2&col==1):
+                # if i==6 or i==7: #諦め
+                ax.tick_params(axis='x', labelsize=10)
+                plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+                # else:
+                #     ax.tick_params(axis='x', labelsize=0)
+                if (row ==3)&(col==1):
+                    fig.delaxes(ax)
+                    # ax.set_visible(False)
+                    # for spine in ax.spines.values():
+                    #     spine.set_visible(False)
+                if i ==0:
+                    ax.set_title(f"{reginame} partial correlaton")
+                # fig.delaxes(axes[3,1])
+            axes[3, 1].set_axis_off()
+            plt.tight_layout()
+            ### Export fig
+            out_dir_fig = out_dir + os.sep + "_png"
+            os.makedirs(out_dir_fig, exist_ok=True)
+            fig.savefig(out_dir_fig + os.sep + f"{regioname_fin}_partial.png")
+            plt.close()
         
         
 # """ # ミスってplot from csv"""

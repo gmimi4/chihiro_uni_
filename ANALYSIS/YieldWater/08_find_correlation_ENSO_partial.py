@@ -15,20 +15,31 @@ import glob
 import datetime
 from statistics import mean
 import pingouin as pg
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _csv_to_dataframe
 import _yield_csv  
 
 
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
+# iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv" 
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\06_correlation_timelag_ENSO\_partial"
+
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
 shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv" 
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\06_correlation_timelag_ENSO\_partial"
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+enso_csv = '/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv'
+iod_csv = '/Volumes/PortableSSD/Malaysia/ENSO/10_IOD/NASA_Json.csv'
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/06_correlation_timelag_ENSO/_partial'
 
 startdate = datetime.datetime(2002,1,1)
 enddate = datetime.datetime(2023,12,1)
@@ -78,6 +89,7 @@ for var in list(df_ensoiod.columns):
 """ yield df"""
 df_yield, df_yield_z = _yield_csv.main()
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region +["Maluku Utara"]
 
 
 """ set year list"""

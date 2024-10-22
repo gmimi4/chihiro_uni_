@@ -10,20 +10,29 @@ from tqdm import tqdm
 import glob
 import matplotlib.pyplot as plt
 from matplotlib import colorbar, colors
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _yield_csv  
 import _csv_to_dataframe 
 import _ADF_MK
 
-pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
-shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\_partial"
+# pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\_partial"
 
+pearson_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_partial"
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
+shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/03_var_variation/_partial'
 
 month_calendar = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec" }
 
@@ -34,6 +43,8 @@ units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC",
 """ FFB yield df"""
 df_yield, df_yield_z = _yield_csv.main()
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region +["Maluku Utara"]
+
 
 def get_key(my_dict, val):
     for key, value in my_dict.items():
@@ -111,6 +122,8 @@ pearson_csvs = glob.glob(pearson_dir + os.sep + "*_abs.csv")
 
 criti_result = {}
 for i, row in tqdm(gdf_region.iterrows()):
+    # i=20
+    # row = gdf_region.loc[i,:]
     regipoly = row.geometry
     reginame = row.Name
     regioname_fin = reginame.replace(" ","")
@@ -126,7 +139,7 @@ for i, row in tqdm(gdf_region.iterrows()):
         ## drop GOSIF
         # df_peason = df_peason.drop("GOSIF", axis=1)
         
-        if len(df_peason_abs.dropna()) == 0:
+        if len(df_peason_abs.dropna(how='all')) == 0:
             criti_result[reginame] = ["", 0, np.nan, np.nan]
         else:
             ### Find critical var name and month

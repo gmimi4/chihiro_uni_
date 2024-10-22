@@ -10,22 +10,33 @@ from tqdm import tqdm
 import datetime
 import glob
 import matplotlib.pyplot as plt
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _yield_csv  
 import _csv_to_dataframe 
 import _find_csvs
 
-enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
+# enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
+# iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
+# pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial\_composite_plot"
 
-pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+enso_csv = '/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv'
+iod_csv = '/Volumes/PortableSSD/Malaysia/ENSO/10_IOD/NASA_Json.csv'
+pearson_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_partial" 
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
 shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial\_composite_plot"
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/05_var_variation_ENSO/_partial/_composite_plot'
 
 varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF',
 units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
@@ -105,6 +116,7 @@ list_palm = df_palm[0].values.tolist()
 """ FFB yield df"""
 df_yield, df_yield_z = _yield_csv.main()
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region +["Maluku Utara"]
 
 
 ## -----------------------------
@@ -145,7 +157,7 @@ for i, row in tqdm(gdf_region.iterrows()):
         # df_peason = df_peason.drop("GOSIF", axis=1)
         df_peason_abs = df_peason.abs()
         
-        if len(df_peason_abs.dropna()) == 0:
+        if len(df_peason_abs.dropna(how='all')) == 0:
             continue
         else:
             ### Find critical var name *just for filename
@@ -206,7 +218,7 @@ for i, row in tqdm(gdf_region.iterrows()):
             enso_result_region[reginame] = df_enso_region
             iod_result_region[reginame] = df_iod_region
             
-            """ Plot"""
+            # """ Plot"""
             # x_label = list(month_calendar.values())
             # for ei, result in {"ENSO":df_enso_region, "IOD":df_iod_region}.items():
             #     fig,axes = plt.subplots(len(varlist),1, figsize=(10, 50))
@@ -242,7 +254,7 @@ for i, row in tqdm(gdf_region.iterrows()):
                 
             
 """ Plot later # なぜか上記のプログラム中で出すとfigsizaがおかしい"""
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial\_composite_plot"
+out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/05_var_variation_ENSO/_partial/_composite_plot"
 csvs_enso = glob.glob(out_dir + os.sep + "*_enso_composite.csv")
 csvs_iod = glob.glob(out_dir + os.sep + "*_iod_composite.csv")
 regions = [os.path.basename(c).split("_")[0] for c in csvs_enso]

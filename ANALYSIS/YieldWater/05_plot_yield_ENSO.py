@@ -10,13 +10,17 @@ import calendar
 import datetime
 import itertools
 import matplotlib.pyplot as plt
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _yield_csv  
 # import _csv_to_dataframe 
 
-enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\04_yield_with_ENSO"
+# enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
+# iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\04_yield_with_ENSO"
+enso_csv = '/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv'
+iod_csv = '/Volumes/PortableSSD/Malaysia/ENSO/10_IOD/NASA_Json.csv'
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/04_yield_with_ENSO'
 
 # varlist = ['GOSIF', 'rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
 # units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
@@ -61,6 +65,7 @@ df_iod = df_iod.loc[startdate:enddate]
 """ yield df"""
 df_yield, df_yield_z = _yield_csv.main()
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region +["Maluku Utara"]
 # max_yield = np.nanmax(df_yield.values)
 # min_yield = np.nanmin(df_yield.values)
 

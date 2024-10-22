@@ -12,22 +12,33 @@ import glob
 import matplotlib.pyplot as plt
 from matplotlib import colorbar, colors
 import math
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _yield_csv  
 import _csv_to_dataframe 
 import _find_csvs
 
-enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
+# enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
+# iod_csv = r"F:\MAlaysia\ENSO\10_IOD\NASA_Json.csv"
+# pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial"
 
-pearson_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_partial"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+enso_csv = '/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv'
+iod_csv = '/Volumes/PortableSSD/Malaysia/ENSO/10_IOD/NASA_Json.csv'
+pearson_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_partial" 
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
 shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial"
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/05_var_variation_ENSO/_partial'
 
 varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF', 
 units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
@@ -107,10 +118,11 @@ list_palm = df_palm[0].values.tolist()
 """ FFB yield df"""
 df_yield, df_yield_z = _yield_csv.main()
 nondata_region = list(df_yield_z[df_yield_z.isna().all(axis=1)].index)
+nondata_region = nondata_region +["Maluku Utara"]
 
 
 ## -----------------------------
-""" Composite plot"""
+
 ## -----------------------------
 
 """ find hihest pearson var and month"""
@@ -137,7 +149,7 @@ for i, row in tqdm(gdf_region.iterrows()):
         # df_peason = df_peason.drop("GOSIF", axis=1)
         df_peason_abs = df_peason.abs()
         
-        if len(df_peason_abs.dropna()) == 0:
+        if len(df_peason_abs.dropna(how='all')) == 0:
             criti_result[reginame] = ["", 0, np.nan, np.nan]
         else:
             ### Find critical var name and month
@@ -206,22 +218,26 @@ df_result= df_result.rename(columns={0:"var",1:"month",2:"anomalyENSO",3:"anomal
 df_result.to_csv(out_dir + os.sep + "anomalies_ENSO_IOD.csv")
         
         
+        
 """ Anomaly plot by region"""
-anomaly_csv = out_dir + os.sep + "anomalies_ENSO_IOD.csv"
-# anomaly_csv = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_partial\anomalies_ENSO_IOD.csv"
-df_anomaly = pd.read_csv(anomaly_csv, index_col=0)
+anomaly_csv = out_dir + os.sep + "anomalies_ENSO_IOD.csv" #for var
+anomaly_yield_csv = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/04_yield_with_ENSO/ENSOIOD_yield_anomaly.csv"
 
-## set yield dictionary for color
-df_anomaly = pd.read_csv(anomaly_csv, index_col=0)
-df_yield_slope = gdf_region.set_index("Name").slope #looks same Name order
-dic_yield_slope = df_yield_slope.to_dict()
+df_anomaly = pd.read_csv(anomaly_csv, index_col=0) #var
+
+
+### set yield anomaly dictionary for color
+df_ano_yield = pd.read_csv(anomaly_yield_csv, index_col=0) #looks same Name order
+dic_ano_yield_enso = df_ano_yield["anomalyENSO"].to_dict()
+dic_ano_yield_iod = df_ano_yield["anomalyIOD"].to_dict()
+     
 
 """ Plot"""
 def collect_ano(tarvar):
     both_ano = {}
     enso_var = {}
     iod_var = {}
-    for regi, row in df_anomaly.iterrows():
+    for regi, row in df_anomaly.iterrows(): #var
         var = row["var"]
         if var == tarvar:
             enso_ano = row["anomalyENSO"]
@@ -268,7 +284,7 @@ def get_minmax(tardic):
     maxlistval = max(allvalues_flat_fin)
     return minlistval, maxlistval
     
-def plot_anomaly(anodic, filename, minr, maxr):    
+def plot_anomaly(anodic, filename, minr, maxr, dic_yield_slope):    
     fig,axes = plt.subplots(4,2, figsize=(20, 20))
     fig.subplots_adjust(hspace=0.5)
     ## yield for color
@@ -301,7 +317,7 @@ def plot_anomaly(anodic, filename, minr, maxr):
     sm = plt.cm.ScalarMappable(cmap=cmap_bar, norm=norm)
     sm.set_array([])  # Dummy array for ScalarMappable
     cbar = plt.colorbar(sm, cax=cbar_ax, orientation="horizontal")
-    cbar.set_label('Yield slope')
+    cbar.set_label('Yield anomaly')
     plt.tight_layout()
     ### Export fig
     fig.savefig(out_dir + os.sep + f"{filename}.png")
@@ -310,7 +326,7 @@ def plot_anomaly(anodic, filename, minr, maxr):
 
 ## Run----------
 minrange,maxrange = get_minmax(enso_ano_all)
-plot_anomaly(enso_ano_all, "ENSO_anomaly.png", minrange,maxrange)
+plot_anomaly(enso_ano_all, "ENSO_anomaly.png", minrange,maxrange, dic_ano_yield_enso)
 
 minrange,maxrange = get_minmax(iod_ano_all)
-plot_anomaly(iod_ano_all, "IOD_anomaly.png", minrange,maxrange)
+plot_anomaly(iod_ano_all, "IOD_anomaly.png", minrange,maxrange, dic_ano_yield_iod)
