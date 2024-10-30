@@ -20,18 +20,29 @@ import glob
 import numpy as np
 from statistics import mean
 import math
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater')
 import _csv_to_dataframe   
 
-yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
-yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
+# yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
+# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag"
+
+yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
+yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
 shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_496_palm2002.txt"
-var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag"
+palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
+out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_pearson"  
     
 
 """ prepare Yield df"""
@@ -230,7 +241,7 @@ def calc_peason(df_csv_):
         df_pearson_all = pd.concat([df_peason_m_1, df_peason_m])
         df_pearson_all.columns=[var] #name column
         df_pearson_all_abs = df_pearson_all.abs()
-        pearsonvar[var] = df_pearson_all_abs[var] #input abs
+        pearsonvar[var] = df_pearson_all[var]
         
     return pearsonvar #dict of peasons for vars in one csv
 
@@ -242,13 +253,15 @@ def calc_peason(df_csv_):
    
 varlist = ['GOSIF', 'rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
 month_calendar = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec" }
-
+units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
+          'VPD':"hPa", 'Et':"mm/day", 'Eb':"mm/day", 'SM':"m3/m3", 'VOD':""}
 
 for i, row in tqdm(gdf_region.iterrows()):
     # i=31
     # row = gdf_region.loc[i]
     regipoly = row.geometry
     reginame = row.Name
+    regioname_fin = reginame.replace(" ","")
     ## pass if no data region
     if reginame in nondata_region:
         continue
@@ -272,6 +285,7 @@ for i, row in tqdm(gdf_region.iterrows()):
             
         """ #get average peason for var"""
         peason_pixels_vars_mean = {}
+        peason_pixels_vars_std = {}
         for var in varlist:
             peas_var = [pdic[var] for pdic in peason_pixels_vars] #list of peason series of var
             df_peas_var = pd.DataFrame(peas_var).T
@@ -279,28 +293,101 @@ for i, row in tqdm(gdf_region.iterrows()):
             df_peas_var_mean.name = var
             
             peason_pixels_vars_mean[var] = df_peas_var_mean
-                
-                
-            """ # Plot by var"""
-            regioname_fin = reginame.replace(" ","")
             
-            fig = plt.figure(figsize=(12, 5))
-            fig.subplots_adjust()
-            ax = fig.add_subplot(1,1,1)
-            ax.plot(df_peas_var_mean.index, df_peas_var_mean)
-            ax.tick_params(axis='x', labelsize=14)
-            ax.tick_params(axis='y', labelsize=14)
-            plt.xticks(rotation=45)
-            ax.set_ylabel('Peason coef', fontsize = 14)
-            plt.tight_layout()
-            ### Export fig
-            out_dir_fig = out_dir + os.sep + "_png" + os.sep + var
-            os.makedirs(out_dir_fig, exist_ok=True)
-            fig.savefig(out_dir_fig + os.sep + f"peason_{regioname_fin}_{var}.png")
-            plt.close()
+            ### std
+            df_peas_var_std = df_peas_var.std(axis=1)
+            df_peas_var_std.name = var
+            peason_pixels_vars_std[var] = df_peas_var_std
 
                 
         ### concat and Export csv
         df_peason_region_mean = pd.DataFrame.from_dict(peason_pixels_vars_mean)
         df_peason_region_mean.to_csv(out_dir + os.sep + f"peason_{regioname_fin}_abs.csv")
+        ## std
+        df_peason_region_std = pd.DataFrame.from_dict(peason_pixels_vars_std)
+        df_peason_region_std.to_csv(out_dir + os.sep + f"peason_{regioname_fin}_stdabs.csv")
+        
+        
+        """ # Plot by var"""
+        
+        fig,axes = plt.subplots(4,2, figsize=(8, 8))
+        fig.subplots_adjust(hspace=0.5)  
+        for i,var in enumerate(varlist):
+            row, col = divmod(i, 2)
+            ax = axes[row, col]
+            # ax = axes[i]
+            ax.errorbar(df_peason_region_mean.index, df_peason_region_mean[var].values, 
+                        yerr=df_peason_region_std[f"{var}"].values, color='blue', ecolor="lightgrey",
+                        label = f"{var}",  fmt='-o', capsize=1)
+            ax.tick_params(axis='y', labelsize=10)
+            ax.set_ylabel(f"Pearson_{var}", fontsize = 16)
+            ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
+            ax.set_ylim(-1,1) #(0,1)
+            # if i == len(varlist)-1:
+            # if (row ==1&col==0)or(row ==2&col==1):
+            # if i==6 or i==7: #諦め
+            ax.tick_params(axis='x', labelsize=10)
+            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+            # else:
+            #     ax.tick_params(axis='x', labelsize=0)
+            if (row ==3)&(col==1):
+                fig.delaxes(ax)
+                # ax.set_visible(False)
+                # for spine in ax.spines.values():
+                #     spine.set_visible(False)
+            if i ==0:
+                ax.set_title(f"{reginame} pearson correlaton")
+            # fig.delaxes(axes[3,1])
+        axes[3, 1].set_axis_off()
+        plt.tight_layout()
+        ### Export fig
+        out_dir_fig = out_dir + os.sep + "_png"
+        os.makedirs(out_dir_fig, exist_ok=True)
+        fig.savefig(out_dir_fig + os.sep + f"{regioname_fin}_pearson.png")
+        plt.close()
+        
+
+        
+""" # from CSV"""
+csv_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/_pearson"
+csvs = glob.glob(csv_dir + os.sep + "*_abs.csv")
+csvs_std = glob.glob(csv_dir + os.sep + "*_stdabs.csv")
+
+varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF', 
+
+for csvf in csvs:
+    reginame = os.path.basename(csvf)[:-4].split("_")[1]
+    std_file = [f for f in csvs_std if reginame in f][0]
+    df_mean = pd.read_csv(csvf, index_col=0)
+    df_std = pd.read_csv(std_file, index_col=0)
+    
+    fig,axes = plt.subplots(4,2, figsize=(20, 15))
+    fig.subplots_adjust(hspace=0.5)  
+    for i,var in enumerate(varlist):
+        row, col = divmod(i, 2)
+        ax = axes[row, col]
+        # ax = axes[i]
+        ax.errorbar(df_mean.index, df_mean[var].values, 
+                    yerr=df_std[f"{var}"].values, color='blue', ecolor="lightgrey",
+                    fmt='-o', capsize=1) #label = f"{var}",
+        ax.tick_params(axis='y', labelsize=14)
+        ax.set_ylabel(f"Pearson_{var}", fontsize = 16)
+        # ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
+        ax.set_ylim(-1,1)
+        ax.axhline(y=0,color='grey', linewidth=0.7)
+        ax.tick_params(axis='x', labelsize=14)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+        if (row ==3)&(col==1):
+            fig.delaxes(ax)
+        if i ==0:
+            ax.set_title(f"{reginame} pearson correlaton")
+        # fig.delaxes(axes[3,1])
+    axes[3, 1].set_axis_off()
+    plt.tight_layout()
+    ### Export fig
+    out_dir_fig = out_dir + os.sep + "_png"
+    os.makedirs(out_dir_fig, exist_ok=True)
+    fig.savefig(out_dir_fig + os.sep + f"{reginame}_pearson.png")
+    plt.close()
+    
         
