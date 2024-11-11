@@ -6,6 +6,7 @@ produce df_yield and z scored df_yield
 import pandas as pd
 import numpy as np
 from scipy.stats import zscore
+import matplotlib.pyplot as plt
 
 yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
 yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
@@ -77,7 +78,45 @@ def main():
             zs = row_valid_z.at[y]
             df_yield_z.at[reginame,y] = zs
     
-    return df_yield, df_yield_z
+    """ detrend yield """
+    ### create least square line ###
+    df_yield_detr = df_yield.copy()
+    for i, row in df_yield_detr.iterrows():
+        row_valid = row[~np.isnan(row)]
+        df_row_valid = row_valid.to_frame()
+        x = row_valid.index.astype("int")
+        y = row_valid.values
+        A = np.vstack([x, np.ones(len(x))]).T
+        a, b = np.linalg.lstsq(A, y, rcond=None)[0] #A, y
+        
+        df_row_valid['predict'] = a * df_row_valid.index.astype("int") + b
+        df_row_valid['detr'] = df_row_valid[i] - df_row_valid['predict']
+        row_valid_detr = df_row_valid['detr']
+        row_valid_detr.name = i
+        ### Scaling ###
+        row_valid_detr_s =  (row_valid_detr - row_valid_detr.min())/(row_valid_detr.max()-row_valid_detr.min())
+        for y in years_row:
+            try:
+                detr = row_valid_detr_s.at[y]
+            except:
+                detr = np.nan
+            df_yield_detr.at[i,y] = detr
+        
+        ## check
+        # regi = "Bengkulu"
+        # x = df_yield.loc[regi,:].index.astype("int")
+        # y = df_yield.loc[regi,:].values
+        # plt.plot(x,y,"ro")
+        # x = df_yield_detr.loc[regi,:].index.astype("int")
+        # y = df_yield_detr.loc[regi,:].values
+        # plt.plot(x,y,"bo")
+        # plt.plot(x,(a*x+b),"g--")
+        # plt.grid()
+        # plt.show()
+        # plt.close()
+
+    
+    return df_yield, df_yield_z, df_yield_detr
 
 
 
