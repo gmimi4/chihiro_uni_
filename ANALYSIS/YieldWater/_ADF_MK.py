@@ -8,8 +8,10 @@ Created on Fri Aug 30 17:15:57 2024
 from statsmodels.tsa.stattools import adfuller
 import pandas as pd
 import pymannkendall as mk
+import numpy as np
+import pandas as pd
 
-def main(df_unseasonal):
+def ADF(df_unseasonal):
     dftest = adfuller(df_unseasonal, autolag="AIC")
     dfoutput = pd.Series(
         dftest[0:4],
@@ -23,9 +25,13 @@ def main(df_unseasonal):
     for key, value in dftest[4].items():
         dfoutput["Critical Value (%s)" % key] = value #Series
     
-    # pval_adf = dfoutput["p-value"]
+    pval_adf = dfoutput["p-value"]
+    if pval_adf > 0.1: #null hypothesis is non-stationary
+        slp_adf,intercept = np.polyfit(np.arange(len(df_unseasonal)), df_unseasonal.values, 1) #normal slope
+    else:
+        slp_adf = 0 #no trend
     
-    return dfoutput
+    return slp_adf
 
 
 def MK(df_unseasonal, p_val):
