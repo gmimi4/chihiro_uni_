@@ -24,11 +24,12 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
 
 # import subprocess
 os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience")
-import _01_pca_pcr_ARX
+import _01_pca_pcr_ARX_rev
 
 # PageName = os.path.basename(in_dir)
 PageName = sys.argv[1]
 # PageName='A1'
+time_lag = sys.argv[2] #1
 
 in_dir = f'/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{PageName}'
 csv_file_list = glob.glob(in_dir + os.sep + "*.csv")
@@ -41,9 +42,7 @@ p_val = 0.1
 # startyear = 2013
 # endyear = 2022
 startyear = 2002
-endyear = 2022
-
-time_lag = 1
+endyear = 2023
 
 out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/01_ARX" + os.sep + "lag_" + str(time_lag)
 os.makedirs(out_dir, exist_ok=True)
@@ -81,7 +80,7 @@ for csv_file in tqdm(csv_file_list):
     idx = os.path.basename(csv_file)[:-4]
     # csv_file = "/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
     try:
-        relative_importances = _01_pca_pcr_ARX.main(csv_file, p_val, startyear, endyear, time_lag)
+        relative_importances = _01_pca_pcr_ARX_rev.main(csv_file, p_val, startyear, endyear, time_lag)
     except:
         relative_importances = dict()
     finally: #なぜか空dictに更新されなかったのでここで実行

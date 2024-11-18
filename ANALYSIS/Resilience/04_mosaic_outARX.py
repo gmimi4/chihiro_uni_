@@ -17,8 +17,9 @@ from rasterio.merge import merge
 import numpy as np
 from tqdm import tqdm
 
-in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/01_ARX/lag_1'
+in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/01_ARX/lag_6'
 out_dir = in_dir + os.sep +'_mosaic'
+os.makedirs(out_dir, exist_ok=True)
 
 variable_list = [
                   "GOSIF",

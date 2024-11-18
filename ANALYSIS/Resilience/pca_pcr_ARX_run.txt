@@ -1,0 +1,9 @@
+source forrasterio3/bin/activate
+python /Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience/01_pca_pcr_ARX_run.py A1 6
+source forrasterio3/bin/activate
+python /Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience/01_pca_pcr_ARX_run.py A2 6
+source forrasterio3/bin/activate
+python /Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience/01_pca_pcr_ARX_run.py A3 6
+source forrasterio3/bin/activate
+python /Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience/01_pca_pcr_ARX_run.py A4 6
+
