@@ -10,9 +10,10 @@ import numpy as np
 from tqdm import tqdm
 import glob
 from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import adfuller
+# from statsmodels.tsa.stattools import adfuller
 import matplotlib.pyplot as plt
 from matplotlib import colorbar, colors
+plt.rcParams['font.family'] = 'Times New Roman'
 os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
 # os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater")
 import _yield_csv  
@@ -127,7 +128,7 @@ pearson_csvs = glob.glob(pearson_dir + os.sep + "*_abs.csv")
 
 criti_result = {}
 for i, row in tqdm(gdf_region.iterrows()):
-    # i=37
+    # i=20
     # row = gdf_region.loc[i,:]
     regipoly = row.geometry
     reginame = row.Name
@@ -151,7 +152,7 @@ for i, row in tqdm(gdf_region.iterrows()):
             df_peason_neg = df_peason.applymap(lambda x: np.nan if x > 0 else x)
             df_peason_abs = df_peason_neg.abs()
 
-
+            df_peason_abs = df_peason_abs.drop(["GOSIF"],axis=1)
             ### Find critical var name and month
             criti_var = df_peason_abs.max().idxmax()
             criti_month = df_peason_abs[criti_var].idxmax() #month str
@@ -195,16 +196,16 @@ for i, row in tqdm(gdf_region.iterrows()):
             # criti_cv = criti_sd/criti_mean
             
             ### deseasonality ###
-            stl_result = STL(df_criti_ave_s, period=12).fit()
-            stl_seasonal = stl_result.seasonal
-            stl_deseason = stl_result.observed - stl_seasonal
+            # stl_result = STL(df_criti_ave_s, period=12).fit()
+            # stl_seasonal = stl_result.seasonal
+            # stl_deseason = stl_result.observed - stl_seasonal
             
             ## MK trend
-            # criti_slp = _ADF_MK.MK(df_criti_ave, 0.1)
-            criti_slp = _ADF_MK.MK(stl_deseason, 0.1)
+            criti_slp = _ADF_MK.MK(df_criti_ave_s, 0.1)
+            # criti_slp = _ADF_MK.MK(stl_deseason, 0.1)
             
             ## ADF and slope
-            criti_slp_adf = _ADF_MK.ADF(stl_deseason) #use deseasonal data
+            criti_slp_adf = _ADF_MK.ADF(df_criti_ave_s) #use deseasonal data
 
             
             criti_result[reginame] = [criti_var, criti_month, criti_sd, criti_slp, criti_slp_adf]
@@ -338,6 +339,15 @@ var_to_ax_idx = {
     "SM": (2, 1),
     "VOD": (3, 0)}
 
+var_name = {
+    "rain": "Precipitation",
+    "temp": "Temperature",
+    "VPD": "VPD",
+    "Et": "Transpiration",
+    "Eb": "Evaporation",
+    "SM": "Soil moisture",
+    "VOD": "VOD"}
+
 def get_minmax(tardic):
     #tardic = cv_ano_all
     dicvalues = list(tardic.values())
@@ -351,7 +361,23 @@ def get_minmax(tardic):
     return minlistval, maxlistval
     
 
-## 全部プロットver (きれいにできない)
+region_short = {
+    "Johor":"Johor", "Kedah":"Kedah", "Kelantan":"Kelantan","Melaka":"Melaka",
+    "Negeri Sembilan":"Neger S","Pahang":"Pahang","Perak":"Perak","Pulau Pinang":"Pulau P",
+    "Sabah":"Sabah", "Sarawak":"Sarawak","Selangor":"Selangor", "Terengganu":"Terengganu",
+    "Aceh":"Aceh", "Banten":"Banten", "Bengkulu":"Bengkulu", "Gorontalo":"Gorontalo",
+    "Jambi":"Jambi", "Jawa Barat":"Jawa B", 
+    "Kalimantan Barat":"Kalim B","Kalimantan Selatan":"Kalim S","Kalimantan Tengah":"Kalim Te", 
+    "Kalimantan Timur":"Kalim Ti", "Kalimantan Utara":"Kalim U",
+    "Kepulauan Bangka Belitung":"Kepul BB", "Kepulauan Riau":"Kepul R",
+    "Lampung":"Lampung", "Maluku":"Maluku", "Papua":"Papua", "Papua Barat":"Papua B",
+    "Riau":"Riau", "Sulawesi Barat":"Sulaw B", "Sulawesi Selatan":"Sulaw S",
+    "Sulawesi Tengah":"Sulaw Th", "Sulawesi Tenggara":"Sulaw Tr", 
+    "Sumatera Barat":"Sumat B", "Sumatera Selatan":"Sumat S", "Sumatera Utara":"Sumat U"
+    }
+
+
+## 全部プロットver (region名前を省略する)
 def plot_anomaly(anodic, filename, minr, maxr):
     fig,axes = plt.subplots(4,2, figsize=(20, 20))
     fig.subplots_adjust(hspace=0.5)
@@ -364,21 +390,26 @@ def plot_anomaly(anodic, filename, minr, maxr):
     color_dic = {}
     for reg, slp in dic_yield_slope.items():
         color_dic[reg] = cmap_bar(norm(slp))
-    ## 
+    ##
     for var in varlist:
         anodic2 = anodic[var]
         regi_list = list(anodic2.keys())
+        regi_short = [region_short[r] for r in regi_list] #replace to short name
         ano_list = list(anodic2.values())
+        ## バーの太さを揃えるため最低3要素入れる（空でも）
+        if len(regi_short)<3:
+            regi_short = regi_short + ["",""]
+            ano_list = ano_list + [np.nan,np.nan]
         extracted_color = {key: color_dic[key] for key in regi_list if key in color_dic}
         row, col = var_to_ax_idx[var]
         ax = axes[row, col]
-        num_bars = len(regi_list) #max 10
+        num_bars = len(regi_short) #max 10
         bar_width = 0.5 * (num_bars/10)
-        ax.bar(regi_list, ano_list, width=bar_width, color=extracted_color.values())
+        ax.bar(regi_short, ano_list, width=bar_width, color=extracted_color.values())
         ax.axhline(y=0, color='grey', linewidth=0.5) #linestyle='--',
-        ax.set_xticks(range(len(regi_list)))
-        ax.set_xticklabels(regi_list, rotation=60)
-        ax.set_title(var, fontsize=16)
+        ax.set_xticks(range(len(regi_short)))
+        ax.set_xticklabels(regi_short, rotation=30, fontsize=14)
+        ax.set_title(var_name[var], fontsize=16)
         ax.set_ylim(minr,maxr)
     fig.delaxes(axes[3, 1])
     ## add yield color bar
@@ -386,7 +417,8 @@ def plot_anomaly(anodic, filename, minr, maxr):
     sm = plt.cm.ScalarMappable(cmap=cmap_bar, norm=norm)
     sm.set_array([])  # Dummy array for ScalarMappable
     cbar = plt.colorbar(sm, cax=cbar_ax, orientation="horizontal")
-    cbar.set_label('Yield slope')
+    cbar.ax.tick_params(labelsize=14)
+    cbar.set_label('Yield slope', y=1, labelpad=10, fontsize=16) #タイトル上にならない
     plt.tight_layout()
     ### Export fig
     fig.savefig(out_dir + os.sep + f"{filename}.png")
@@ -394,17 +426,17 @@ def plot_anomaly(anodic, filename, minr, maxr):
     
 ## Run----------
 minrange,maxrange = get_minmax(cv_ano_all)
-plot_anomaly(cv_ano_all, "CV", minrange,maxrange)
+plot_anomaly(cv_ano_all, "CV", minrange,0.3)
 
 minrange,maxrange = get_minmax(slope_ano_all)
-plot_anomaly(slope_ano_all, "MKslope", minrange, maxrange)    
+plot_anomaly(slope_ano_all, "MKslope", minrange, 0.05)    
 
 minrange,maxrange = get_minmax(slopeadf_ano_all)
-plot_anomaly(slopeadf_ano_all, "ADFslope", minrange, maxrange) 
+plot_anomaly(slopeadf_ano_all, "ADFslope", minrange, 0.05) 
 
 
 
-## ひとつずつプロットver
+## ひとつずつプロットver　## 体裁まとめてプロットに合わせて直してない
 def plot_anomaly(anodic, filename, minr, maxr):
     ## yield for color
     cmap_bar = plt.get_cmap('coolwarm')
