@@ -10,11 +10,13 @@ from tqdm import tqdm
 import glob
 
 # pp = "partial"
-pp = "_pearson_detr_neg"
-csv_std_slp = rf"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\{pp}\std_slope.csv"
-region_shp = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\{pp}\_shp"
-# out_dir = csv_dir + os.sep + "_shp"
+pp = "_pearson_detr_0_neg"
+# csv_std_slp = rf"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\{pp}\std_slope.csv"
+# region_shp = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\{pp}\_shp"
+csv_std_slp = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/03_var_variation/{pp}/std_slope.csv"
+region_shp = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+out_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/03_var_variation/{pp}/_shp"
 os.makedirs(out_dir,exist_ok=True)
 
 
