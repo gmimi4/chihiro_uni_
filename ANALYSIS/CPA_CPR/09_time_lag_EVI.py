@@ -16,21 +16,21 @@ import rasterio
 startyear = 2000
 endyear = 2023
 
-# time_lag = 1 #
-time_lag = sys.argv[1]
+time_lag = 1 #
+# time_lag = sys.argv[1]
     
 for page in ["A1","A2","A3","A4"]:
     # page = "A1"
-    # in_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI\{page}"
-    in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{page}'
+    in_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI\{page}"
+    # in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/{page}'
     csv_file_list = glob.glob(in_dir + os.sep + "*.csv")
-    # out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\6_time_lag\EVI" + os.sep + f"lag_{str(time_lag)}"
-    out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/6_time_lag" + os.sep + f"lag_{str(time_lag)}"
+    out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\6_time_lag\EVI" + os.sep + f"lag_{str(time_lag)}"
+    # out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/6_time_lag" + os.sep + f"lag_{str(time_lag)}"
     os.makedirs(out_dir, exist_ok=True)
     
     ### time series csvをつくったラスターのどれか
-    # sample_tif = r"F:\MAlaysia\SIF\GOSIF\02_tif_age_adjusted\res_01\extent\GOSIF_2000081_extent_adj_res01_extent_A1.tif"
-    sample_tif = f'/Volumes/PortableSSD/MAlaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/extent/GOSIF_2000081_extent_adj_res01_extent_{page}.tif'
+    sample_tif = rf"F:\MAlaysia\MODIS_EVI\01_MOD13A2061_resample\_4326_res01_age_adjusted\extent\MODEVI_20221016_4326_res01_adj_extentafter_{page}.tif"
+    # sample_tif = f'/Volumes/PortableSSD/MAlaysia/SIF/GOSIF/02_tif_age_adjusted/res_01/extent/GOSIF_2000081_extent_adj_res01_extent_{page}.tif'
     with rasterio.open(sample_tif) as src:
         src_arr = src.read(1)
         meta = src.meta
@@ -83,23 +83,25 @@ for page in ["A1","A2","A3","A4"]:
         df_csv_z = df_csv.copy()
         
         ### obtain monthly mean and std as dict
+        ### monthly meanを引いて全体でz scoreにする  
         monthly_mean_std_dic = {}
         for var in vars_list:
             df_csv_z[f"{var}z"] = np.nan
+            df_csv_z[f"{var}de"] = np.nan
             df_var = df_csv_z.loc[:,var]
-            month_dic = {}
             for m in months:
                 specific_month_rows = df_var[df_var.index.month == m]
                 monthly_mean = specific_month_rows.mean(skipna=True)
-                monthly_std = specific_month_rows.std(skipna=True)
-                month_dic[m] = [monthly_mean, monthly_std]
+                # monthly_std = specific_month_rows.std(skipna=True)
+                df_csv_z.loc[specific_month_rows.index,f"{var}de"] = df_csv_z.loc[specific_month_rows.index,f"{var}"] - monthly_mean
                 
-                ##インデックスで抽出して元のデータフレームの新規列にzscoreを入れる
-                specific_month_idx = specific_month_rows.index.tolist()
-                df_csv_z.loc[specific_month_idx, f"{var}z"] = (df_csv_z[var]-monthly_mean)/monthly_std
-                # df_csv_z.loc[specific_month_idx, f"{var}z"] = df_csv_z[var]-monthly_mean
-        
-            monthly_mean_std_dic[var] = month_dic #確認用
+            ## z scoring
+            var_mean = df_csv_z.loc[:,f"{var}de"].mean(skipna=True) # this mean is almost zero
+            var_std = df_csv_z.loc[:,f"{var}de"].std(skipna=True)
+            df_csv_z.loc[:, f"{var}z"] = (df_csv_z[f"{var}de"]-var_mean)/var_std
+                
+            ## drop de cols
+            df_csv_z = df_csv_z.drop([f"{var}de"],axis=1)
             
         ### nan削除
         df_valid = df_csv_z.dropna() #nanがあれば除外
@@ -114,14 +116,14 @@ for page in ["A1","A2","A3","A4"]:
             # reset datetime index
             df_valid_reset = df_valid.reset_index()
             # extract gosif
-            vars_listz = [v + "z" for v in vars_list if v != "GOSIF"]
+            vars_listz = [v + "z" for v in vars_list if v != "EVI"]
             df_valid_sifonly = df_valid_reset.drop(vars_listz + ["datetime"], axis=1)
             # extract vars z scored only
-            df_valid_varonly = df_valid_reset.drop(["GOSIFz","datetime"], axis=1)
+            df_valid_varonly = df_valid_reset.drop(["EVIz","datetime"], axis=1)
             
             ### shift gosif data set by lag
             empty_data = [np.nan for _ in range(int(time_lag))] # [np.nan, np.nan, ...]
-            df_empty = pd.DataFrame({"GOSIFz":empty_data})
+            df_empty = pd.DataFrame({"EVIz":empty_data})
             
             # concat empty df and laged sif df
             df_valid_sifonly_lag = pd.concat([df_empty, df_valid_sifonly], axis=0, ignore_index=True)
@@ -134,15 +136,18 @@ for page in ["A1","A2","A3","A4"]:
             
         
             """　#Select Dataframe """    
-            Y_norm = df_valid_lag['GOSIFz'] #monthly z scoringしたものを使う
-            X_norm = df_valid_lag.drop(['GOSIFz'], axis=1)
+            Y_norm = df_valid_lag['EVIz'] #monthly z scoringしたものを使う
+            X_norm = df_valid_lag.drop(['EVIz'], axis=1)
             
             varzs = [col for col in X_norm.columns]
             
             r_p_dic = {} #pearson and pval for each var
             for var in use_vars: #with "z" in name
                 X_norm_var = X_norm.loc[:,var+"z"]
-                r, pval = stats.pearsonr(X_norm_var, Y_norm)
+                try:
+                    r, pval = stats.pearsonr(X_norm_var, Y_norm)
+                except:
+                    r, pval = np.nan, np.nan
                 
                 r_p_dic[var] = [r, pval]
              
