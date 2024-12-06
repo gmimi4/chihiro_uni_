@@ -37,14 +37,15 @@ device = torch.device('mps')
 DEVICE = device
 
 dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/1_training_dataset'
-# dataset_path = '/Volumes/PortableSSD 1/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
+# dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
+# dataset_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/9.tif'
 model_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/model'
+# model_dir = dataset_path + os.sep + 'model'
 # model_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
-os.makedirs(model_dir, exist_ok=True)
 
 img_dir = os.path.join(dataset_path,'img')
-ano_dir = os.path.join(dataset_path,'annoBi01') #Binary
+ano_dir = os.path.join(dataset_path,'annoBi') #Binary
 img_listt = natsorted(glob(os.path.join(img_dir,"*.tif")))
 ano_listt = natsorted(glob(os.path.join(ano_dir,"*.tif")))
 
@@ -112,7 +113,7 @@ class LoadDataSet(Dataset):
             self.folders = os.listdir(self.path) #['img', 'anno']
             # image_folder = os.path.join(self.path, self.folders[0]) #[1]
             image_folder = os.path.join(self.path, 'img')
-            mask_folder = os.path.join(self.path, 'annoBi01') #[0]
+            mask_folder = os.path.join(self.path, 'annoBi') #[0]
             image_path = os.path.join(image_folder,natsorted(os.listdir(image_folder))[idx])
             # image_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/04_UNet_road/02_training/SLOPE05m_composit/img/8.tif'
 
@@ -193,7 +194,7 @@ def visualize_dataset(n_images, predict=None):
 
 visualize_dataset(5)
 
-BATCH_SIZE = 12
+BATCH_SIZE = 12#12
 
 split_ratio = 0.3
 train_size=int(np.round(train_dataset.__len__()*(1 - split_ratio),0))
@@ -627,18 +628,43 @@ loss_fn = nn.BCEWithLogitsLoss()
 
 """ borrow from UNet """
 #IoUのクラスを定義
+from sklearn.metrics import confusion_matrix
+def compute_iou(y_pred, y_true):
+    # ytrue, ypred is a flatten vector
+    y_pred = y_pred.to('cpu').detach().numpy()
+    y_true = y_true.to('cpu').detach().numpy()
+    y_pred = y_pred.flatten()
+    y_true = y_true.flatten()
+    current = confusion_matrix(y_true, y_pred, labels=[0, 1])
+    # compute mean iou
+    intersection = np.diag(current) #extract diagonal elements
+    ground_truth_set = current.sum(axis=1)
+    predicted_set = current.sum(axis=0)
+    union = ground_truth_set + predicted_set - intersection
+    IoU = intersection / union.astype(np.float32)
+    return np.mean(IoU)
+
+
 class IoU(nn.Module):
     def __init__(self, weight=None, size_average=True):
         super(IoU, self).__init__()
 
     def forward(self, inputs, targets, smooth=1):
-        inputs = inputs.view(-1)
-        targets = targets.view(-1)
-        intersection = (inputs * targets).sum()
-        total = (inputs + targets).sum()
-        union = total - intersection
+        # inputs = inputs.view(-1)
+        # targets = targets.view(-1)
+        # intersection = (inputs * targets).sum()
+        # total = (inputs + targets).sum()
+        # union = total - intersection
 
-        IoU = (intersection + smooth)/(union + smooth)
+        # IoU = (intersection + smooth)/(union + smooth)
+        
+        inputs = nn.Sigmoid()(inputs)
+        inputs[inputs<0.025] = 0 #set threshold
+        inputs[inputs!=0] = 1
+        targets[targets<0.039] =0
+        targets[targets!=0] =1
+        
+        IoU = compute_iou(inputs, targets)
 
         return IoU
 
@@ -652,9 +678,11 @@ def save_ckp(state, is_best, checkpoint_path, best_model_path):
 ### Training save check point
 
 accuracy_metric = IoU()
-num_epochs=10#100
+num_epochs=100#100
 valid_loss_min = np.Inf
 
+# checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3_Bi01.pth') #chkpoint_
+# best_model_path = os.path.join(model_dir, 'model_Medc3_Bi01.pth') #bestmodel.pt
 checkpoint_path = os.path.join(model_dir, 'chkpoint_Medc3_Bi_SDG.pth') #chkpoint_
 best_model_path = os.path.join(model_dir, 'model_Medc3_Bi_SDG.pth') #bestmodel.pt
 
@@ -677,8 +705,9 @@ for epoch in range(num_epochs):
     valid_loss = []
     valid_score = []
     pbar = tqdm(train_loader, desc = 'description')
+    model.train() #added
     for x, y in pbar:
-      # x_train = torch.autograd.Variable(x).to(device) #UNet
+      x_train = torch.autograd.Variable(x).to(device) #UNet
       y_train = torch.autograd.Variable(y).to(device) #UNet
       optimizer.zero_grad()
       out = model.forward(x.to(DEVICE))
@@ -686,7 +715,7 @@ for epoch in range(num_epochs):
       train_loss.append(loss.item())
       
       ## 精度評価
-      score = accuracy_metric(out, y_train)
+      score = accuracy_metric(out, y) #y_train
       loss.backward()
       optimizer.step()
       train_score.append(score.item())
@@ -741,16 +770,16 @@ plt.plot(range(1,num_epochs+1), total_valid_loss, label="Valid Loss")
 plt.title("Loss")
 plt.xlabel("epochs")
 plt.ylabel("Loss")
+plt.legend()
 plt.subplot(1, 2, 2)
 plt.plot(range(1,num_epochs+1), total_train_score, label="Train Score")
 plt.plot(range(1,num_epochs+1), total_valid_score, label="Valid Score")
 plt.title("Score (IoU)")
 plt.xlabel("epochs")
 plt.ylabel("IoU")
-plt.savefig(model_dir+os.sep+"IoU_SDG.png")
+plt.legend()
+plt.savefig(model_dir+os.sep+f"loss_Medc3_test_{total_valid_score[-1]}.png") #
 plt.show()
-
-
 
 ### Visualizing results
 fig, ax = plt.subplots(3,4, figsize=(10,8))
@@ -763,6 +792,9 @@ with torch.no_grad():
         ax[i,0].imshow(x.squeeze(0).squeeze(0)) #cmap='gray'
         ax[i,0].set_title('Image')
         ax[i,1].imshow(y.squeeze(0).squeeze(0)) #, cmap='gray'
+        # y1 = y.squeeze(0).squeeze(0)
+        # y1[y1<0.039] =0
+        # ax[i,1].imshow(y1) #, cmap='gray'
         ax[i,1].set_title('Mask')
         x_og = x_og.to(DEVICE)
         out = model(x_og[:1]) #x_og[:1] tensor #maybe this is for the prediction
@@ -780,20 +812,18 @@ plt.show()
 """ """
 """ Prediction """
 ### Load model test
-# best_model_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3_test.pth'
-model_load = torch.load(best_model_path)
+# best_model_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model/model_Medc3.pth'
+# model_load = torch.load(best_model_path)
 
 # output_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/OUT_swinBi'
-# output_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/2_out05m/extent3'
-output_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/2_out05m_retraining/extent1'
-os.makedirs(output_dir,exist_ok=True)
+output_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/2_out05m_retraining/extent3'
 
 ### Converting without tfw
+# input_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/images'
 # input_dir2 = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/1_tiles/imagesTiff'
-input_dir2 = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/1_tiles05m/extent1/imagesTiff'
+input_dir2 = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/1_tiles05m/extent3/imagesTiff'
 
-import glob
-file_list = glob.glob(input_dir2+ os.sep +"*.tif")
+file_list =glob(input_dir2+ os.sep +"*.tif")
 
 # for input_path2 in file_list:
 #     with rasterio.open(input_path2) as src:
