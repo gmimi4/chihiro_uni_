@@ -13,11 +13,14 @@ import geopandas as gpd
 import pandas as pd
 import time
 from datetime import datetime
+from datetime import datetime, timedelta
 from tqdm import tqdm
 
+pagename = sys.argv[1]
 # csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
 csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI'
-dir_list = ["A1","A2","A3","A4"] #
+# dir_list = ["A1","A2","A3","A4"] #
+dir_list = [pagename]
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days"
 out_parent_dir = '/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
@@ -88,29 +91,52 @@ def sort_index_date(df):
 
 
 """ # collect EVI dates """
-sample_evi_csv = csv_dir_list[0] + os.sep + "A1_EVI_pixels_dates.csv"
+sample_evi_csv = csv_dir_list[0] + os.sep + f"{pagename}_EVI_pixels_dates.csv"
 df_evi_sample = pd.read_csv(sample_evi_csv)
 df_evi_sample_datestr = df_evi_sample.columns.to_list()
 df_evi_sample_date = [datetime.strptime(d, "%Y-%m-%d") for d in df_evi_sample_datestr if not d=="Unnamed: 0"]
-df_evi_sample_date_sort = sorted(df_evi_sample_date) 
+df_evi_sample_date_sort = sorted(df_evi_sample_date)
+
+evi_sample_dates = []
+for i,d in enumerate(df_evi_sample_date_sort):
+    start_d = df_evi_sample_date_sort[i]
+    if not i==len(df_evi_sample_date_sort)-1:
+        end_d = df_evi_sample_date_sort[i+1] - timedelta(days=1)
+    else:
+        end_d = datetime(2023, 12, 31, 0, 0)
+    evi_sample_dates.append([start_d, end_d])
+    
+    
 
 """ # ignore nan when resample sum  """
 def resample_sum16days(df, variable):
-    ## 16days from 1st Jan every year
+    ## 16days from 1st Jan every year -> need alligned with EVI
     df_collist = []
-    for col in df.columns:
-        # col = 12867
-        # df_col.iat[15] = 5
-        # df_col.iat[20] = 5
+    # for col in tqdm(df.columns):
+    for col in tqdm(df.columns):
+        # col = 12867 #A4,Et
+        # col = 5000 #A1,Et
         df_col = df[col]
+        
+        # df_col_years = []
+        # for yr in years: #16days from 1st Jan
+        #     df_col_yr = df_col[df_col.index.year==yr]
+        #     # df_col_drop = df_col_yr.dropna()
+        #     if variable == "rain" or variable=="Et" or variable=="Eb":
+        #         df_col_monthly = df_col_yr.resample("16D").apply(lambda x: np.nan if x.isna().all() else x.sum())
+        #     else:
+        #         df_col_monthly = df_col_yr.resample("16D").apply(lambda x: np.nan if x.isna().all() else x.mean())
+        
+        """ #Allign with EVI"""
         df_col_years = []
-        for yr in years: #16days from 1st Jan
-            df_col_yr = df_col[df_col.index.year==yr]
-            df_col_drop = df_col_yr.dropna()
+        for s_e in evi_sample_dates:
+            df_col_yr = df_col.loc[s_e[0]:s_e[1]]
             if variable == "rain" or variable=="Et" or variable=="Eb":
-                df_col_monthly = df_col_drop.resample("16D").sum()
+                df_col_val = df_col_yr.sum(skipna=False)
             else:
-                df_col_monthly = df_col_drop.resample("16D").mean()
+                df_col_val = df_col_yr.mean(skipna=False)
+            df_col_monthly = pd.DataFrame({col: [df_col_val], "datetime":s_e[0]})
+            df_col_monthly = df_col_monthly.set_index("datetime")
             df_col_years.append(df_col_monthly)
         
         df_col_allyears = pd.concat(df_col_years)
@@ -137,7 +163,7 @@ for csv_dir in csv_dir_list:
     """ #処理 """
     monthly_dic = {}
     for variable in tqdm(variable_list):
-        # variable = "Et"
+        # variable = "rain"
         csvfile_var = [c for c in csvs if variable in c][0]
         print(csvfile_var)
         df_var = pd.read_csv(csvfile_var)

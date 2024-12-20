@@ -30,19 +30,22 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
 # GPP_dir = r"D:\Malaysia\MODIS_GPP\02_tif\res_01\merge"
 GOSIF_dir = "/Volumes/PortableSSD/Malaysia/SIF/GOSIF/02_tif_age_adjusted/res_01"
 # KBDI_dir = r"D:\Malaysia\KBDI\1_daily"
-VPD_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/VPD"
-rain_dir = "/Volumes/SSD_2/Malaysia/GPM/01_tif"
-temp_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/Temperature_2m/02_tif/daily_1950"
-Et_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Et/res_01"
-Eb_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Eb/res_01"
+# VPD_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/VPD"
+# rain_dir = "/Volumes/SSD_2/Malaysia/GPM/01_tif_Affine"
+# temp_dir = "/Volumes/PortableSSD/Malaysia/ECMWF/Temperature_2m/02_tif/daily_1950"
+# Et_dir = "/Volumes/PortableSSD/MAlaysia/GLEAM/02_tif_v41/Et"
+# Eb_dir = "/Volumes/PortableSSD/MAlaysia/GLEAM/02_tif_v41/Eb"
+# Et_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Et/res_01"
+# Eb_dir = "/Volumes/PortableSSD/Malaysia/GLEAM/02_tif/Eb/res_01"
 # SMASC_dir = r"F:\MAlaysia\SMOS\SMOSIC\04_ras\SM\ASC\res_01"
 SMDSCE_dir = "/Volumes/PortableSSD 1/Malaysia/AMSRE/01_tif/SM_C/sameday"
-SMDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/SM_C1"
+# SMDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/SM_C1"
 # VODASC_dir = r"F:\MAlaysia\SMOS\SMOSIC\04_ras\VOD\ASC\res_01"
 VODDSCE_dir = "/Volumes/PortableSSD 1/Malaysia/AMSRE/01_tif/VOD_C/sameday"
-VODDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/VOD_C1"
+# VODDSC2_dir = "/Volumes/SSD_2/Malaysia/AMSR2/DSC/01_tif/VOD_C1"
 
-out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries"
+# out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries"
+out_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/until2023"
 
 # Malaysia_land_shape = r"C:\Users\chihiro\Desktop\PhD\Malaysia\AOI\Administration\National_boundary\Malaysia_national_boundary.shp"
 Malaysia_land_shape = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
@@ -50,31 +53,31 @@ Malaysia_land_shape = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Ind
 GOSIF_list = glob.glob(GOSIF_dir+os.sep+"*.tif")
 # GPP_list = glob.glob(GPP_dir+"\\*.tif")
 # KBDI_list = glob.glob(KBDI_dir+"\\*.tif")
-VPD_list = glob.glob(VPD_dir+os.sep+"*.tif")
-rain_list = glob.glob(rain_dir+os.sep+"*.tif")
-temp_list = glob.glob(temp_dir+os.sep+"*.tif")
-Et_list = glob.glob(Et_dir+os.sep+"*.tif")
-Eb_list = glob.glob(Eb_dir+os.sep+"*.tif")
+# VPD_list = glob.glob(VPD_dir+os.sep+"*.tif")
+# rain_list = glob.glob(rain_dir+os.sep+"*.tif")
+# temp_list = glob.glob(temp_dir+os.sep+"*.tif")
+# Et_list = glob.glob(Et_dir+os.sep+"*.tif")
+# Eb_list = glob.glob(Eb_dir+os.sep+"*.tif")
 # SMASC_list = glob.glob(SMASC_dir+"\\*.tif")
 SMDSCE_list = glob.glob(SMDSCE_dir+os.sep+"*.tif")
-SMDSC2_list = glob.glob(SMDSC2_dir+os.sep+"*.tif")
+# SMDSC2_list = glob.glob(SMDSC2_dir+os.sep+"*.tif")
 # VODASC_list = glob.glob(VODASC_dir+"\\*.tif")
 VODDSCE_list = glob.glob(VODDSCE_dir+os.sep+"*.tif")
-VODDSC2_list = glob.glob(VODDSC2_dir+os.sep+"*.tif")
+# VODDSC2_list = glob.glob(VODDSC2_dir+os.sep+"*.tif")
 
 
 
 data_kinds_dic = {#"GPP":GPP_list,"KBDI":KBDI_list,
-                   "GOSIF":GOSIF_list,
-                   "rain":rain_list,
-                   "temp":temp_list,
-                    "Et":Et_list,
-                   "Eb":Eb_list,
-                   "VPD":VPD_list,
+                   # "GOSIF":GOSIF_list,
+                   # "rain":rain_list,
+                   # "temp":temp_list,
+                   #  "Et":Et_list,
+                   # "Eb":Eb_list,
+                   # "VPD":VPD_list,
                    "SMDSCE":SMDSCE_list,
                    "VODDSCE":VODDSCE_list,
-                   "SMDSC2":SMDSC2_list,
-                   "VODDSC2":VODDSC2_list
+                   # "SMDSC2":SMDSC2_list,
+                   # "VODDSC2":VODDSC2_list
                   }
 
 """

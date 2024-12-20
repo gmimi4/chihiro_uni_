@@ -36,11 +36,11 @@ import random
 device = torch.device('mps')
 DEVICE = device
 
-dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/1_training_dataset'
+dataset_path = '/Volumes/PortableSSD 1/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/1_training_dataset'
 # dataset_path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # dataset_path = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset'
 # path = '/Volumes/PortableSSD/Malaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/img/9.tif'
-model_dir = '/Volumes/PortableSSD/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/model'
+model_dir = '/Volumes/PortableSSD 1/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/model'
 # model_dir = dataset_path + os.sep + 'model'
 # model_dir = '/Volumes/PortableSSD 1/MAlaysia/01_Blueprint/Pegah_san/03_UNet/2_retraining/1_training_dataset/model'
 
@@ -799,11 +799,53 @@ with torch.no_grad():
         x_og = x_og.to(DEVICE)
         out = model(x_og[:1]) #x_og[:1] tensor #maybe this is for the prediction
         out = nn.Sigmoid()(out)
+        # out = nn.Softmax()(out) #can't...
         out = out.squeeze(0).squeeze(0).cpu()
         ax[i,2].imshow(out) #cmap='gray'
         ax[i,2].set_title('Prediction')
         ax[i,3].imshow((out>0.025).float(), cmap='gray')
         ax[i,3].set_title('Threshold Prediction')
+plt.show()
+
+### Visualizing results for paper
+## Collect imgs from tif
+img_dir = f'/Volumes/PortableSSD 1/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/1_training_dataset/img'
+mask_dir = '/Volumes/PortableSSD 1/Malaysia/01_Blueprint/SDGuthrie/03_UNet/_retraining/1_training_dataset/annoBi01'
+out_dir = '/Volumes/PortableSSD 1/Malaysia/01_Blueprint/SDGuthrie/03_UNet/2_out05m_retraining/for_paper'
+images = glob(img_dir + os.sep + "*.tif")
+masks = glob(mask_dir + os.sep + "*.tif")
+outs = glob(out_dir + os.sep + "*.tif")
+
+ids = [os.path.basename(i)[:-4] for i in images]
+ids_sample = random.sample(ids, 3)
+
+images_select = [i for i in images if os.path.basename(i)[:-4] in ids_sample]
+mask_select = [i for i in masks if os.path.basename(i)[:-4] in ids_sample]
+out_select = [i for i in outs if os.path.basename(i)[:-4] in ids_sample]
+
+fig, ax = plt.subplots(3, 3, figsize=(12, 12))
+for i in range(len(images_select)):
+    # Read image, mask, and prediction
+    img = io.imread(images_select[i]).astype('float32')  # RGB image
+    mask = io.imread(mask_select[i]).astype('float32')  # Single-channel mask
+    pred = io.imread(out_select[i]).astype('float32')  # Prediction (RGB)
+
+    # Plot in subplots
+    ax[i, 0].imshow(img / 255.0)  # Normalize RGB image for display
+    ax[i, 0].set_title("Image")
+    ax[i, 0].axis("off")
+    
+    ax[i, 1].imshow(mask, cmap="gray")  # Plot mask as grayscale
+    ax[i, 1].set_title("Mask")
+    ax[i, 1].axis("off")
+    
+    ax[i, 2].imshow((pred>0.025), cmap='Oranges_r') # Normalize prediction (assumed RGB)
+    ax[i, 2].set_title("Prediction")
+    ax[i, 2].axis("off")
+
+# Save and show the plot
+output_file = os.path.join(out_dir, "prediction_sample.png")
+plt.savefig(output_file, bbox_inches='tight')
 plt.show()
 
 
