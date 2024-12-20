@@ -15,11 +15,12 @@ import time
 from datetime import datetime
 from tqdm import tqdm
 
-csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
+# csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
+csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI'
 dir_list = ["A1","A2","A3","A4"] #
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
-# csv_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR"
-out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days"
+# out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days"
+out_parent_dir = '/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
 
 start_date = '2000-01-01'
 end_date = '2023-12-31'
@@ -61,10 +62,11 @@ def convert_error(df, vari):
         df_nan = df.where((df != 0)) 
         # see = df_nan.iloc[13330:15335,500:1000]
         df = df_nan
+    
             
     df = df.astype("float16")
     # see2 = df.iloc[13330:15335,500:1000]
-    df[df < 0] = np.nan
+    df[df < 0] = np.nan #convert negative to nan here
     
     return df
 
@@ -96,7 +98,7 @@ df_evi_sample_date_sort = sorted(df_evi_sample_date)
 def resample_sum16days(df, variable):
     ## 16days from 1st Jan every year
     df_collist = []
-    for col in tqdm(df.columns):
+    for col in df.columns:
         # col = 12867
         # df_col.iat[15] = 5
         # df_col.iat[20] = 5
@@ -129,7 +131,7 @@ def resample_sum16days(df, variable):
 """ #処理 """
 for csv_dir in csv_dir_list:
     PageName = os.path.basename(csv_dir)
-    csvs = glob.glob(csv_dir+"\\*.csv")
+    csvs = glob.glob(csv_dir+os.sep + "*.csv")
     # csvs = [c for c in csvs if "SMDSC" in c or "VODDSC" in c] #特定のcsvのとき →全部必要
     
     """ #処理 """

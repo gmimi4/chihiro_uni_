@@ -20,14 +20,16 @@ import time
 import datetime
 from tqdm import tqdm
 
-csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries"
-dir_list = ["A1","A2","A3","A4"] #
+# csv_parent_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries"
+csv_parent_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/until2023"
+dir_list = ["A1","A2","A3","A4"] #,
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # csv_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR"
-out_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\1_vars_at_pixels"
+# out_parent_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels"
+out_parent_dir = "/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
 
 start_date = '2000-01-01'
-end_date = '2022-12-31'
+end_date = '2023-12-31'
 
 ## csvを全部読んでdfにする
 variable_list = [
@@ -93,7 +95,7 @@ def resample_sum(df, df_allnan):
         # df_col.iat[20] = 5
         df_col = df[col]
         df_col_drop = df_col.dropna()
-        df_col_monthly = df_col_drop.resample("M").sum()
+        df_col_monthly = df_col_drop.resample("ME").sum() #"M"
         df_col_allmonth = pd.concat([df_allnan, df_col_monthly], axis=1)
         df_col_allmonth = df_col_allmonth.iloc[:,1:]
         df_collist.append(df_col_allmonth)
@@ -108,7 +110,7 @@ def resample_sum(df, df_allnan):
 """ #処理 """
 for csv_dir in csv_dir_list:
     PageName = os.path.basename(csv_dir)
-    csvs = glob.glob(csv_dir+"\\*.csv")
+    csvs = glob.glob(csv_dir+os.sep +"*.csv")
     # csvs = [c for c in csvs if "SMDSC" in c or "VODDSC" in c] #特定のcsvのとき →全部必要
     
     """ #処理 """
@@ -126,7 +128,7 @@ for csv_dir in csv_dir_list:
         
         """ # prepare df only nan for later concat """ 
         df_nan = pd.DataFrame(index=df_var_sort.index)
-        df_nan = df_nan.resample('M').sum()
+        df_nan = df_nan.resample('ME').sum() #"M"
         df_nan["nan"] = np.nan
                 
         
@@ -138,7 +140,7 @@ for csv_dir in csv_dir_list:
             # df_var_monthly = df_var_sort.resample('M').sum(numeric_only=True)
             # seee_monthly = df_var_monthly.head()
         else:
-            df_var_monthly = df_var_sort.resample('M').mean(numeric_only=True)
+            df_var_monthly = df_var_sort.resample('ME').mean(numeric_only=True) #"M"
             # seee_monthly = seee.resample('M').mean(numeric_only=True)
            
         monthly_dic[variable] = df_var_monthly
@@ -159,6 +161,7 @@ for csv_dir in csv_dir_list:
         # idx=13723
         pixel_list = []
         for variable, df in monthly_dic.items():
+            # print(variable)
             # GPP_at_idx = df_GPP_monthly.loc[:,idx].rename("GPP", inplace=True)
             var_at_idx = df.loc[:,idx].rename(variable, inplace=True)
             pixel_list.append(var_at_idx)
