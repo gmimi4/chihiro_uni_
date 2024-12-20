@@ -131,13 +131,63 @@ for csvfile in tqdm(csvs):
         
         out_num_dir = out_dir + os.sep + "01_num_date"
         os.makedirs(out_num_dir,exist_ok=True)
-        # sgfilt_low.to_csv(out_num_dir + os.sep + f"num_date_{filename}.txt")
+        sgfilt_low.to_csv(out_num_dir + os.sep + f"num_date_{filename}.txt")
+        
+        
+        # -------------------------
+        """ # Local minimum of resid within 2 month"""
+        # -------------------------
+        ## assume 1 point perturbation
+        df_sgfit_min = df_sgfit.loc[df_sgfit['sgfilt'].idxmin()]
+        perturbation_date = df_sgfit_min.name
+        perturbation_date_2mon = perturbation_date + pd.DateOffset(months=2)
+        ## local minumum date
+        ser_resid_2mon = ser_resid.loc[perturbation_date:perturbation_date_2mon]
+        perturbation_least = ser_resid_2mon.idxmin() # This is start of recovery
+        
+        
+        # -------------------------
+        """ # Fitting for recovery"""
+        # -------------------------
+        
+        
+        
+        
     
     except: #All nan or strange dataset
         num_pert = np.nan
         
+
+        
     
     num_dic[filename] = num_pert
+    
+    
+    
+""" Export num tif"""
+ras_dic = {}
+for i,numval in num_dic.items():
+    # i=4446
+    # imoprtance_dic = num_dic[str(i)]
+    ras_dic[int(i)] = numval
+
+#念のためindx順にソート
+ras_dic_sort = sorted(ras_dic.items())
+
+#これに入れる
+importance_arr = np.full(len(ras_dic_sort), np.nan)
+for i in ras_dic_sort:
+    arri = i[0]
+    arrval = i[1]
+    np.put(importance_arr, [arri], arrval)
+# reshape
+importance_arr_re = importance_arr.reshape((height, width))
+
+out_file = out_num_dir + os.sep +f"{pagename}_perturbation_num.tif"
+with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
+    with rasterio.open(out_file, 'w', **meta) as dst:
+      dst.write(importance_arr_re, 1)
+        
         
     
     
