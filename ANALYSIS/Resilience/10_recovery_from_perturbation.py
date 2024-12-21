@@ -11,11 +11,13 @@ from statsmodels.tsa.seasonal import STL
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 import rasterio
+from scipy.optimize import curve_fit
+from sklearn.metrics import r2_score
 from tqdm import tqdm
 
 
 pagename = sys.argv[1]
-pagename = 'A1'
+# pagename = 'A1'
 in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days/{pagename}'
 out_dir_parent = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/07_perturbation'
 out_dir = out_dir_parent + os.sep + f"{pagename}"
@@ -74,7 +76,10 @@ def moving_diff(series, window = 18):
     return rolling_diff, series_reset
         
     
-num_dic ={}       
+num_dic ={}
+timing_dic = {}
+recovery_dic ={}
+pertutbtions = [] 
 for csvfile in tqdm(csvs):
     # csvfile = [c for c in csvs if "10000" in c][0]
     filename = os.path.basename(csvfile)[:-4]
@@ -126,12 +131,15 @@ for csvfile in tqdm(csvs):
         ## collect decrease more than 0.01 percentile
         sgfilt_low = df_sgfit[df_sgfit.sgfilt < sgfilt_001]
         
-        """ Collect num of perturbations and dates"""
+        """ Collect num of perturbations and timing"""
+        ## num
         num_pert = len(sgfilt_low)
+        ## timing (assuming 1 point)
+        timing = series_reset[series_reset.datetime==sgfilt_low.index.values[0]].index[0]
         
-        out_num_dir = out_dir + os.sep + "01_num_date"
-        os.makedirs(out_num_dir,exist_ok=True)
-        sgfilt_low.to_csv(out_num_dir + os.sep + f"num_date_{filename}.txt")
+        ## collect (later) perturbation df
+        sgfilt_low_reset = sgfilt_low.reset_index()
+        sgfilt_low_reset["filename"] = filename
         
         
         # -------------------------
@@ -149,45 +157,98 @@ for csvfile in tqdm(csvs):
         # -------------------------
         """ # Fitting for recovery"""
         # -------------------------
+        def recovery_exponential(t, x0, r): #variable should be first
+            return x0 * np.exp(r * t)
         
+        ## まずは5yrでやってみる
+        fit_period = 5
+        dataset = ser_resid.loc[perturbation_least: perturbation_least + pd.DateOffset(years=fit_period)]
+        dataset = dataset.reset_index()
+        x_data = dataset.index
+        y_data = dataset.resid
         
+        ## initial guess
+        x0_init = ser_resid.loc[perturbation_least - pd.DateOffset(years=fit_period): perturbation_least - pd.DateOffset(years=1)]
+        x0_init = x0_init.mean(skipna=True)
+        initial_guess = [x0_init, -0.1]  # Initial guess for [x0, r]
+        ## fit
+        params, covariance = curve_fit(recovery_exponential, x_data, y_data, p0=initial_guess)
+
+        ## Generate fitted curve
+        y_pred = recovery_exponential(x_data, *params)
+        ## Plot
+        # plt.scatter(x_data, y_data, label="residual", color="blue", alpha=0.6)
+        # plt.plot(x_data, y_fit, label="Fitted Curve", color="red", linewidth=2)
+        # # plt.xlabel("x")
+        # plt.ylabel("residual")
+        # plt.legend()
+        # plt.show()
+        
+        ## R2
+        r_squared = r2_score(y_data, y_pred)
+        
+        if r_squared >0.2:
+            recovery_time = 1/np.abs(params[1]) #16days per unit
+        else:
+            recovery_time = np.nan
         
         
     
     except: #All nan or strange dataset
         num_pert = np.nan
+        timing = np.nan
+        recovery_time = np.nan
+        sgfilt_low_reset = pd.DataFrame({"datetime":[np.nan], "resid":[np.nan], "sgfilt":[np.nan], "filename":[filename]})
         
 
         
     
     num_dic[filename] = num_pert
+    timing_dic[filename] = timing
+    recovery_dic[filename] = recovery_time
+    pertutbtions.append(sgfilt_low_reset)
+
+
+
+""" Export perturbation evernts"""
+df_perturbation_timings = pd.concat(pertutbtions)
+df_perturbation_timings.to_csv(out_dir + os.sep + f"num_date_{pagename}.txt")
     
     
     
-""" Export num tif"""
-ras_dic = {}
-for i,numval in num_dic.items():
-    # i=4446
-    # imoprtance_dic = num_dic[str(i)]
-    ras_dic[int(i)] = numval
+""" Export tif"""
+def to_raster(tar_dic, outrasname):
+    ras_dic = {}
+    for i,numval in tar_dic.items():
+        # i=4446
+        # imoprtance_dic = num_dic[str(i)]
+        ras_dic[int(i)] = numval
+    
+    #念のためindx順にソート
+    ras_dic_sort = sorted(ras_dic.items())
+    
+    #これに入れる
+    importance_arr = np.full(len(ras_dic_sort), np.nan)
+    for i in ras_dic_sort:
+        arri = i[0]
+        arrval = i[1]
+        np.put(importance_arr, [arri], arrval)
+    # reshape
+    importance_arr_re = importance_arr.reshape((height, width))
+    
+    out_file = out_dir + os.sep +f"{pagename}_{outrasname}.tif"
+    with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
+        with rasterio.open(out_file, 'w', **meta) as dst:
+          dst.write(importance_arr_re, 1)
 
-#念のためindx順にソート
-ras_dic_sort = sorted(ras_dic.items())
 
-#これに入れる
-importance_arr = np.full(len(ras_dic_sort), np.nan)
-for i in ras_dic_sort:
-    arri = i[0]
-    arrval = i[1]
-    np.put(importance_arr, [arri], arrval)
-# reshape
-importance_arr_re = importance_arr.reshape((height, width))
+to_raster_dic = {"numperturbation":num_dic, 
+                 "timing":timing_dic,
+                 "recoverytime":recovery_dic}
 
-out_file = out_num_dir + os.sep +f"{pagename}_perturbation_num.tif"
-with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
-    with rasterio.open(out_file, 'w', **meta) as dst:
-      dst.write(importance_arr_re, 1)
-        
+
+for outrasname, tar_dic in to_raster_dic.items():
+    to_raster(tar_dic, outrasname)
         
     
     
