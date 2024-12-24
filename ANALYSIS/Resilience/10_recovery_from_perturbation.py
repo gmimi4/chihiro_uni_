@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-# 
+# Empirical evidence for recent global shifts in vegetation resilience
 """
 
 import numpy as np
@@ -21,7 +21,7 @@ pagename = sys.argv[1]
 in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days/{pagename}'
 out_dir_parent = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/07_perturbation'
 out_dir = out_dir_parent + os.sep + f"{pagename}"
-os.makedirs(out_dir_parent,exist_ok=True)
+os.makedirs(out_dir,exist_ok=True)
 
 csvs = glob.glob(in_dir + os.sep +'*.csv')
 
@@ -79,6 +79,8 @@ def moving_diff(series, window = 18):
 num_dic ={}
 timing_dic = {}
 recovery_dic ={}
+recovrate_dic = {}
+r2_dic = {}
 pertutbtions = [] 
 for csvfile in tqdm(csvs):
     # csvfile = [c for c in csvs if "10000" in c][0]
@@ -167,15 +169,29 @@ for csvfile in tqdm(csvs):
         x_data = dataset.index
         y_data = dataset.resid
         
+        """ #following paper code """
+        # dataset_raw = ser_fit.observed
+        # dataset_raw = dataset_raw.loc[perturbation_least: perturbation_least + pd.DateOffset(years=fit_period)]
+        # fitting = dataset.set_index("datetime")
+        # armin = np.argmin(fitting.values[:8])
+        # fitting_min = fitting[armin:]
+        # trange = np.arange(fitting_min.shape[0])
+        # popt, _ = curve_fit(recovery_exponential, trange, fitting_min.values - np.nanmean(fitting_min.values), p0=p0, jac=exp_jac, bounds=bounds)
+        # test = fitting_min.values - np.nanmean(fitting_min.values)
+        # plt.scatter(range(len(test)), test, color='red', label="1D Array Points")
+        # plt.show()
+        """ """
+        
         ## initial guess
         x0_init = ser_resid.loc[perturbation_least - pd.DateOffset(years=fit_period): perturbation_least - pd.DateOffset(years=1)]
         x0_init = x0_init.mean(skipna=True)
         initial_guess = [x0_init, -0.1]  # Initial guess for [x0, r]
         ## fit
-        params, covariance = curve_fit(recovery_exponential, x_data, y_data, p0=initial_guess)
+        params, covariance = curve_fit(recovery_exponential, x_data, y_data - np.nanmean(y_data.values), p0=initial_guess) #center to zero
 
         ## Generate fitted curve
         y_pred = recovery_exponential(x_data, *params)
+        recovrate = params[1]
         ## Plot
         # plt.scatter(x_data, y_data, label="residual", color="blue", alpha=0.6)
         # plt.plot(x_data, y_fit, label="Fitted Curve", color="red", linewidth=2)
@@ -187,11 +203,11 @@ for csvfile in tqdm(csvs):
         ## R2
         r_squared = r2_score(y_data, y_pred)
         
-        if r_squared >0.2:
-            recovery_time = 1/np.abs(params[1]) #16days per unit
-        else:
-            recovery_time = np.nan
-        
+        # if r_squared >0.2:
+        #     recovery_time = 1/np.abs(recovrate) #16days per unit
+        # else:
+        #     recovery_time = np.nan
+        recovery_time = 1/np.abs(recovrate) #16days per unit
         
     
     except: #All nan or strange dataset
@@ -199,6 +215,8 @@ for csvfile in tqdm(csvs):
         timing = np.nan
         recovery_time = np.nan
         sgfilt_low_reset = pd.DataFrame({"datetime":[np.nan], "resid":[np.nan], "sgfilt":[np.nan], "filename":[filename]})
+        recovrate = np.nan
+        r_squared = np.nan
         
 
         
@@ -207,6 +225,8 @@ for csvfile in tqdm(csvs):
     timing_dic[filename] = timing
     recovery_dic[filename] = recovery_time
     pertutbtions.append(sgfilt_low_reset)
+    recovrate_dic[filename] = recovrate
+    r2_dic[filename] = r_squared
 
 
 
@@ -244,7 +264,10 @@ def to_raster(tar_dic, outrasname):
 
 to_raster_dic = {"numperturbation":num_dic, 
                  "timing":timing_dic,
-                 "recoverytime":recovery_dic}
+                 "recoverytime":recovery_dic,
+                 "recoveryrate":recovrate_dic,
+                 "r2":r2_dic
+                 }
 
 
 for outrasname, tar_dic in to_raster_dic.items():
