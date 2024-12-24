@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 # Empirical evidence for recent global shifts in vegetation resilience
-monthly data
 """
 
 import numpy as np
@@ -19,9 +18,9 @@ from tqdm import tqdm
 
 pagename = sys.argv[1]
 # pagename = 'A1'
-in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI/{pagename}'
-out_dir_parent = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/07_perturbation/_EVI'
-out_dir = out_dir_parent
+in_dir = f'/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days/{pagename}'
+out_dir_parent = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/07_perturbation'
+out_dir = out_dir_parent + os.sep + f"{pagename}"
 os.makedirs(out_dir,exist_ok=True)
 
 csvs = glob.glob(in_dir + os.sep +'*.csv')
@@ -40,7 +39,7 @@ meta.update({"nodata":np.nan})
 """ # STL from paper code"""
 # f = 24
 # ns = 7
-def robust_stl(series, period=12, smooth_length=7):
+def robust_stl(series, period=24, smooth_length=7):
     def nt_calc(f,ns):
         '''Calcualte the length of the trend smoother based on
         Cleveland et al., 1990'''
@@ -61,7 +60,7 @@ def robust_stl(series, period=12, smooth_length=7):
 
 
 """ # Window length for differences (18points =9monts in paper)"""
-def moving_diff(series, window = 9):
+def moving_diff(series, window = 18):
     half_window = window // 2
     
     series_reset = series.reset_index()

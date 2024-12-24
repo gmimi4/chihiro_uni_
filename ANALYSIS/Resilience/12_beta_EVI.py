@@ -22,21 +22,25 @@ from scipy import stats
 import copy
 import rasterio
 from tqdm import tqdm
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\Resilience")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\Resilience")
+os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/Resilience')
 import _PSD_beta
-import _ADF_MK
 
 # csvfile = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels/A1/15706.csv"
 # page = "A1"
 page = sys.argv[1]
-csv_dir = rf"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days\{page}"
+# csv_dir = rf"/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days/{page}"
+csv_dir = rf"/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI/{page}"
 startyear = 2002
 endyear = 2023
-out_dir = r"D:\Malaysia\02_Timeseries\Resilience\08_beta\_EVI16"
+# out_dir = r"D:\Malaysia\02_Timeseries\Resilience\08_beta\_EVI16"
+# out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/08_beta/_EVI16'
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Resilience/08_beta/_EVI'
 
 csvs = glob.glob(csv_dir + os.sep + "*.csv")
 
-sample_tif = rf"F:\MAlaysia\MODIS_EVI\01_MOD13A2061_resample\_4326_res01_age_adjusted\extent\MODEVI_20221016_4326_res01_adj_extentafter_{page}.tif"
+# sample_tif = rf"F:\MAlaysia\MODIS_EVI\01_MOD13A2061_resample\_4326_res01_age_adjusted\extent\MODEVI_20221016_4326_res01_adj_extentafter_{page}.tif"
+sample_tif = f'/Volumes/PortableSSD/MAlaysia/MODIS_EVI/01_MOD13A2061_resample/_4326_res01_age_adjusted/extent/MODEVI_20221016_4326_res01_adj_extentafter_{page}.tif'
 with rasterio.open(sample_tif) as src:
     src_arr = src.read(1)
     meta = src.meta
