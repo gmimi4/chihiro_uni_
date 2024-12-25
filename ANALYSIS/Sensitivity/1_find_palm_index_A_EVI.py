@@ -15,11 +15,14 @@ from rasterstats import zonal_stats
 # from osgeo import gdal, ogr
 # import matplotlib.pyplot as plt
 
-PageName = 'A1'
-sample_tif = fr"F:\MAlaysia\MODIS_EVI\01_MOD13A2061_resample\_4326_res01_age_adjusted\extent\MODEVI_20221016_4326_res01_adj_extentafterFIN_{PageName}.tif"
-# palm_poly = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\extract_Malaysia\Malaysia_PO_area_fin.shp"
-palm_ras = r'F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\GlobalOilPalm_OP-YoP_mosaic100m.tif'
-out_dir = r'D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index_EVI'
+# PageName = 'A1'
+PageName = sys.argv[1]
+# sample_tif = fr"F:\MAlaysia\MODIS_EVI\01_MOD13A2061_resample\_4326_res01_age_adjusted\extent\MODEVI_20221016_4326_res01_adj_extentafterFIN_{PageName}.tif"
+sample_tif = f'/Volumes/PortableSSD/Malaysia/MODIS_EVI/01_MOD13A2061_resample/_4326_res01_age_adjusted/extent/MODEVI_20221016_4326_res01_adj_extentafterFIN_{PageName}.tif'
+# palm_ras = r'F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\GlobalOilPalm_OP-YoP_mosaic100m.tif'
+palm_ras = '/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif'
+# out_dir = r'D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index_EVI'
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index_EVI'
 
 src = rasterio.open(sample_tif)
 src_arr = src.read(1)
@@ -98,6 +101,7 @@ target_point["geometry"] = target_point["geometry"].representative_point()
 
 # パームを一定面積以上含むpointをExport
 tmp_dir = out_dir + os.sep + "_pointsA"
+os.makedirs(tmp_dir,exist_ok=True)
 target_point.to_file(os.path.join(tmp_dir,f"palm_area_points_{PageName}.shp"))
 
 
