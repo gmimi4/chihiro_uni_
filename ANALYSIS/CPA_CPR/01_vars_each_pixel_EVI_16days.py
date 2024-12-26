@@ -23,7 +23,7 @@ csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeserie
 dir_list = [pagename]
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days"
-out_parent_dir = '/Volumes/PortableSSD/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
+out_parent_dir = '/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
 
 start_date = '2000-01-01'
 end_date = '2023-12-31'
@@ -116,6 +116,7 @@ def resample_sum16days(df, variable):
     for col in tqdm(df.columns):
         # col = 12867 #A4,Et
         # col = 5000 #A1,Et
+        # col = 13330 #A1,VODD2
         df_col = df[col]
         
         # df_col_years = []
@@ -132,9 +133,9 @@ def resample_sum16days(df, variable):
         for s_e in evi_sample_dates:
             df_col_yr = df_col.loc[s_e[0]:s_e[1]]
             if variable == "rain" or variable=="Et" or variable=="Eb":
-                df_col_val = df_col_yr.sum(skipna=False)
+                df_col_val = df_col_yr.sum(skipna=True)
             else:
-                df_col_val = df_col_yr.mean(skipna=False)
+                df_col_val = df_col_yr.mean(skipna=True)
             df_col_monthly = pd.DataFrame({col: [df_col_val], "datetime":s_e[0]})
             df_col_monthly = df_col_monthly.set_index("datetime")
             df_col_years.append(df_col_monthly)
@@ -163,7 +164,7 @@ for csv_dir in csv_dir_list:
     """ #処理 """
     monthly_dic = {}
     for variable in tqdm(variable_list):
-        # variable = "rain"
+        # variable = "VODDSC2"
         csvfile_var = [c for c in csvs if variable in c][0]
         print(csvfile_var)
         df_var = pd.read_csv(csvfile_var)
@@ -171,6 +172,7 @@ for csv_dir in csv_dir_list:
         df_var = convert_error(df_var, variable)  
         df_var_sort = sort_index_date(df_var)
         # seee = df_var_sort.head()
+        # seee = df_var_sort.iloc[500:1000,13330:15335]
         
                         
         """ # 16days dataにする """
