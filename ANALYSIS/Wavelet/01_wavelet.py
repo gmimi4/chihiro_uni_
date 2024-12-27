@@ -17,15 +17,19 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 import numpy as np
 
-csv_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean"
-out_dir = r"D:\Malaysia\02_Timeseries\Wavelet\01_cross_correlation"
+# csv_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean"
+# out_dir = r"D:\Malaysia\02_Timeseries\Wavelet\01_cross_correlation"
+csv_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CCM/01_region_mean/EVI'
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Wavelet/01_cross_correlation/EVI'
 
 startyear = 2002
 endyear = 2023
 
 csvs = glob.glob(csv_dir + os.sep + "*.csv")
 
-varlist = ['GOSIF','rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
+vegedata = "EVI"
+
+varlist = [vegedata,'rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
 varlist2 = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] 
 
 # 連続ウェーブレット変換を行う関数
@@ -127,7 +131,7 @@ for csvfile in tqdm(csvs):
     
     #------------------------------------------------------------------------------
     for var in varlist2:
-        sig01 = df_csv["GOSIFs"]
+        sig01 = df_csv[f"{vegedata}s"]
         sig02 = df_csv[f"{var}s"]
         
         sigcon = pd.concat([sig01, sig02], axis=1)
@@ -135,7 +139,7 @@ for csvfile in tqdm(csvs):
         sigcon = sigcon.dropna()
         datetime = sigcon.index.to_numpy()
         
-        sig01 = sigcon.loc[:,"GOSIFs"]
+        sig01 = sigcon.loc[:,f"{vegedata}s"]
         sig02 = sigcon.loc[:,f"{var}s"]
         tm01 = np.arange(0, len(sigcon), 1)
         tm02 = tm01
@@ -160,8 +164,8 @@ for csvfile in tqdm(csvs):
         ## Export resutlts
         out_dir_fin = out_dir + os.sep + reginame
         os.makedirs(out_dir_fin, exist_ok=True)
-        np.save(out_dir_fin+os.sep + f"coherence_GOSIF_{var}.npy", wcoh)
-        np.save(out_dir_fin+os.sep + f"phase_GOSIF_{var}.npy", wphs)
+        np.save(out_dir_fin+os.sep + f"coherence_{vegedata}_{var}.npy", wcoh)
+        np.save(out_dir_fin+os.sep + f"phase_{vegedata}_{var}.npy", wphs)
         np.save(out_dir_fin+os.sep + f"frequency_{var}.npy", freq_cwt01)
         np.save(out_dir_fin+os.sep + f"scale_{var}.npy", s01)
         np.save(out_dir_fin+os.sep + f"datetime_{var}.npy", datetime)
@@ -213,7 +217,7 @@ for csvfile in tqdm(csvs):
             
             
         # plot
-        plot_scaro(sig01, freq_cwt01, cwt01, COI01, "GOSIF") #freq_cwt01
+        plot_scaro(sig01, freq_cwt01, cwt01, COI01, vegedata) #freq_cwt01
         plot_scaro(sig02, freq_cwt02, cwt02, COI02, var)
         
         
@@ -264,6 +268,6 @@ for csvfile in tqdm(csvs):
                                   orientation="vertical",
                                   label='phase')
         out_dir_fin = out_dir + os.sep + reginame
-        fig.savefig(out_dir_fin + os.sep + f"coherence_phase_GOSIG_{var}.png", bbox_inches='tight')
+        fig.savefig(out_dir_fin + os.sep + f"coherence_phase_{vegedata}_{var}.png", bbox_inches='tight')
         plt.close()
 
