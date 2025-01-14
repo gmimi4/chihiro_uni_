@@ -17,7 +17,8 @@ from rasterio.merge import merge
 import numpy as np
 from tqdm import tqdm
 
-in_dir = '/Volumes/PortableSSD/MAlaysia/ENSO/01_deviations/lag0'
+# in_dir = '/Volumes/PortableSSD/MAlaysia/ENSO/01_deviations/lag0'
+in_dir = r"F:\MAlaysia\ENSO\01_deviations\lag0"
 out_dir = in_dir + os.sep + '_mosaic'
 
 variable_list = [
@@ -35,7 +36,7 @@ period_list = ["OND","JFM","AMJ","JAS"]
 
 
 for variable in variable_list:
-    tifs = glob.glob(in_dir + os.sep + f"*{variable}*.tif")
+    tifs = glob.glob(in_dir + os.sep + f"*{variable}*_norm.tif")
     for peri in period_list:
         tifs_p = [t for t in tifs if peri in t]
         srcs =[]
