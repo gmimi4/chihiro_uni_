@@ -16,11 +16,13 @@ import time
 import datetime
 from tqdm import tqdm
 
-csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
+# csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
+csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI/_shiftrev'
 dir_list = ["A1","A2","A3","A4"] #
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # csv_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR"
-out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI"
+# out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI"
+out_parent_dir = '/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI'
 
 start_date = '2000-01-01'
 end_date = '2023-12-31'
@@ -110,7 +112,7 @@ def resample_sum(df, df_allnan):
 """ #処理 """
 for csv_dir in csv_dir_list:
     PageName = os.path.basename(csv_dir)
-    csvs = glob.glob(csv_dir+"\\*.csv")
+    csvs = glob.glob(csv_dir+os.sep + "*.csv")
     # csvs = [c for c in csvs if "SMDSC" in c or "VODDSC" in c] #特定のcsvのとき →全部必要
     
     """ #処理 """

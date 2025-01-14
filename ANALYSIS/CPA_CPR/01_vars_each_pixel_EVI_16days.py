@@ -18,12 +18,12 @@ from tqdm import tqdm
 
 pagename = sys.argv[1]
 # csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
-csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI'
+csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI/_shiftrev'
 # dir_list = ["A1","A2","A3","A4"] #
 dir_list = [pagename]
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # out_parent_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_EVI_16days"
-out_parent_dir = '/Volumes/PortableSSD 1/MAlaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
+out_parent_dir = '/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI_16days'
 
 start_date = '2000-01-01'
 end_date = '2023-12-31'
