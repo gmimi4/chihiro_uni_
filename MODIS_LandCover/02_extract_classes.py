@@ -6,7 +6,8 @@ import rasterio
 import numpy as np
 import os
 
-tif = r"F:\MAlaysia\MODIS_IGBP\MODIS_IGBP_mosaic.tif"
+# tif = r"F:\MAlaysia\MODIS_IGBP\MODIS_IGBP_mosaic.tif"
+tif = "/Volumes/PortableSSD/Malaysia/MODIS_IGBP/MODIS_IGBP_mosaic.tif"
 out_dir = os.path.dirname(tif)
 
 reclass_map = {
@@ -15,18 +16,18 @@ reclass_map = {
     3: 40,
     4: 40,
     5: 40,
-    6: 30, #shrub and grass
+    6: 30, #shrub
     7: 30,
     8: 30,
     9: 30,
-    10:30,
-    11:99, #others
+    10:10, #Grasslands
+    11:50, #wetland
     12:20, #cropland
-    13:99,
-    14:20,
+    13:99, #others(cities)
+    14:30,
     15:99,
-    16:99,
-    17:99,  
+    16:60, #barren
+    17:50,   
     }
 
 with rasterio.open(tif) as src:
