@@ -3,144 +3,725 @@
 Cartopy is in gdal_copy (spyder ok) and rasterio_copy2 (no spyder)
 """
 
+# -------------------------------------
+"""# Plot geopandas rank"""
+# -------------------------------------
+import os
+import pandas as pd
+import geopandas as gpd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+
+def plot_rank(region_shp,rankcol):
+    # region_shp = region_shp_dir + os.sep + f"sign_change_{var}_regionmean.shp" 
+    out_dir = os.path.dirname(region_shp) + os.sep + "_png"
+    os.makedirs(out_dir, exist_ok=True)
+    
+    gdf_region = gpd.read_file(region_shp)
+    gdf_region_ex = gdf_region[gdf_region[rankcol] !=0]
+    ### color barのサイズが変えられない諦め
+    f_size_title = 20
+    f_size = 16        
+    fig, ax = plt.subplots(figsize=(10,5))
+    plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    cmap = "YlGnBu"
+    column = rankcol
+    gdf_region_ex.plot(ax=ax, legend=True, column=column, cmap=cmap, #column="log"
+                        legend_kwds={"location":"bottom","shrink":.6
+                            # "orientation": "horizontal" #{'label': "Month"}
+                            })
+    gdf_region.boundary.plot(ax=ax, edgecolor='black', linewidth=0.7) ## frame
+    
+    filename = os.path.basename(region_shp)[:-4]
+    plt.savefig(out_dir + os.sep + f'{filename}_rank.png', dpi=600)
+    plt.clf()
+    plt.close()
+    
+## Run
+shp_path = r"D:\Malaysia\02_Timeseries\CPA_CPR\9_ISPRS_rank_correlation\ENSOdevi_mean_comprank.shp"
+plot_rank(shp_path,"rank_other")
+shp_path = r"D:\Malaysia\02_Timeseries\CPA_CPR\9_ISPRS_rank_correlation\sign_change_morethan1_regionmean_comprank.shp"
+plot_rank(shp_path,"rank_other")
+shp_path = r"F:\MAlaysia\Pegah-san\1_zonal\Suitmean2000-2017_mean.shp"
+plot_rank(shp_path,"rank_suita") 
+
+
+# -------------------------------------
+"""# Plot geopandas stressed var""" ##離散色
+# https://geodynamics.sci.hokudai.ac.jp/humet/meteo/tutorial.html
+# https://hackmd.io/@h2tg95D2RP2ed-D8u-49Mg/S1moBqaRr
+# -------------------------------------
+import os
+import pandas as pd
+import geopandas as gpd
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap, BoundaryNorm, rgb2hex
+import numpy as np
+
+varlist = ["rain","temp","VPD","Et","Eb","SM","VOD","morethan1"]
+
+region_shp_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\8_ISPRS_stressed_region"
+out_dir = region_shp_dir + os.sep + "_png"
+os.makedirs(out_dir, exist_ok=True)
+
+num_colors = 5
+cmapget = matplotlib.colormaps.get_cmap('YlGnBu')
+color_indices = np.linspace(0, 1, num_colors)  # 10 evenly spaced values between 0 and 1
+colors = [cmapget(i) for i in color_indices]
+code_list = [mcolors.to_hex(color[:3]) for color in colors]
+cmap = ListedColormap(code_list)
+
+for var in varlist:
+    region_shp = region_shp_dir + os.sep + f"sign_change_{var}_regionmean.shp"
+    # region_shp = r"D:\Malaysia\02_Timeseries\CPA_CPR\8_ISPRS_stressed_region\largechange_enso_1_75_regionmean.shp"
+    gdf_region = gpd.read_file(region_shp)
+    
+    if var == "morethan1":
+        var = "morethan"
+    # var = "large"
+    column = f"Ch{var}"
+    gdf_region_ex = gdf_region[gdf_region[column] !=0]
+    ### convert to categorical values
+    categorical_label = list(range(0,num_colors,1))
+    gdf_region_ex[column +"cate"] = pd.cut(gdf_region_ex[column], bins=num_colors, labels=categorical_label)
+    f_size_title = 20
+    f_size = 16        
+    fig, ax = plt.subplots(figsize=(10,5))
+    plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    gdf_region_ex.plot(ax=ax, legend=False, column=column +"cate", cmap=cmap, #column="log"
+                        )
+    ## frame
+    gdf_region.boundary.plot(ax=ax, edgecolor='black', linewidth=0.7) 
+    ### Set up color bar with correct boundaries and labels}
+    unique_values = sorted(gdf_region_ex[column].unique())
+    min_value = min(unique_values)
+    max_value = max(unique_values)
+    bounds = list(np.linspace(min_value,max_value, num_colors+1))
+    norm = mcolors.BoundaryNorm(bounds, cmap.N)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    ### Add color bar to the plot
+    cbar = fig.colorbar(sm, ax=ax, orientation="horizontal", pad=0.08, shrink=0.6)
+    cbar.set_ticks(bounds)
+    cbar.set_ticklabels([f"{bound:.2f}" for bound in bounds])
+    
+    filename = os.path.basename(region_shp)[:-4]
+    plt.savefig(out_dir + os.sep + f'{filename}_categorical.png', dpi=600)
+    plt.clf()
+    plt.close()
+
+
+
+# -------------------------------------
+"""# Plot geopandas stressed var"""
+# -------------------------------------
+import os
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+varlist = ["rain","temp","VPD","Et","Eb","SM","VOD","morethan1"]
+
+region_shp_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\8_ISPRS_stressed_region"
+out_dir = region_shp_dir + os.sep + "_png"
+os.makedirs(out_dir, exist_ok=True)
+
+for var in varlist:
+    region_shp = region_shp_dir + os.sep + f"sign_change_{var}_regionmean.shp"
+    # region_shp = r"D:\Malaysia\02_Timeseries\CPA_CPR\8_ISPRS_stressed_region\largechange_enso_1_75_regionmean.shp"
+    gdf_region = gpd.read_file(region_shp)
+    
+    if var == "morethan1":
+        var = "morethan"
+    # var = "large"
+    gdf_region_ex = gdf_region[gdf_region[f"Ch{var}"] !=0]
+    ### color barのサイズが変えられない諦め
+    f_size_title = 20
+    f_size = 16        
+    fig, ax = plt.subplots(figsize=(10,5))
+    plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    cmap = "YlGnBu"
+    column = f"Ch{var}"
+    gdf_region_ex.plot(ax=ax, legend=True, column=column, cmap=cmap, #column="log"
+                        legend_kwds={"location":"bottom","shrink":.6
+                            # "orientation": "horizontal" #{'label': "Month"}
+                            })
+    gdf_region.boundary.plot(ax=ax, edgecolor='black', linewidth=0.7) ## frame
+    
+    filename = os.path.basename(region_shp)[:-4]
+    plt.savefig(out_dir + os.sep + f'{filename}.png', dpi=600)
+    plt.clf()
+    plt.close()
+
+
+# -------------------------------------
+"""# Final: large importance sign change (75%) and also enso decrease"""
+## 離散色
+# https://geodynamics.sci.hokudai.ac.jp/humet/meteo/tutorial.html
+# https://hackmd.io/@h2tg95D2RP2ed-D8u-49Mg/S1moBqaRr
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap, BoundaryNorm, rgb2hex
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
 import os
 import rasterio
-# import georaster
 from rasterio.plot import show
-from rasterio.windows import Window
-import numpy as np
-import geopandas as gpd
-from shapely.geometry import Polygon
-import pandas as pd
-import glob
-# import matplotlib as mpl
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize
-from matplotlib.ticker import MaxNLocator
-import matplotlib.colors as colors
-from PIL import Image
+from matplotlib import colorbar, colors
+import numpy as np
+import math
 plt.rcParams['font.family'] = 'Times New Roman'
 
+# tif = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\timeeffect\sign_change_morethan1_filt.tif"
+tif = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\largechange_enso_1_75.tif"
+out_dir = os.path.dirname(tif) + os.sep + "_png"
 
-    
+### Check arr_log or not!! below
 
-# -------------------------------------
-"""# Violin plot by polygon"""
-## sensitivity distribution
-# -------------------------------------
-import seaborn as sns
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import glob
-import os
-import rasterio
-import rasterio.mask
-from shapely.geometry import Polygon, mapping
-
-poly_dir = r"F:\MAlaysia\AOI\Administration\by_Islands"
-tif_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity\_mosaic"
-out_dir = tif_dir
-
-polys = glob.glob(poly_dir +os.sep +"*.shp")
-tifs = glob.glob(tif_dir +os.sep +"*.tif")
-
-
-for tif in tifs:
-    peri = os.path.basename(tif)[:-4].split("_")[-1]
-    data_dfs = []
-    for poly in polys:
-        data_dic ={}
-        poly_name = os.path.basename(poly)[:-4]
-        gdf = gpd.read_file(poly)
-        gdf_diss = gdf.dissolve(by='tmpIs')
-        poly_geom = gdf_diss.geometry.values[0]
-        
-        with rasterio.open(tif) as src:
-            # Mask the raster with the polygon
-            out_image, out_transform = rasterio.mask.mask(src, [mapping(poly_geom)], crop=True)
-
-        masked_array = out_image[0]
-        # check
-        # plt.imshow(masked_array)
-        masked_array_ = np.ravel(masked_array) #flat
-        masked_array_clean = masked_array_[~np.isnan(masked_array_)] #no nan
-        
-        data_dic[poly_name] = masked_array_clean
-        
-        ## prepare for dataframe
-        df = pd.DataFrame(data_dic)
-        df_melted = df.melt(var_name=f'{poly_name}', value_name='Values')
-        df_melted = df_melted.rename(columns={f"{poly_name}":"region"})
-        
-        data_dfs.append(df_melted)
-
-    df_concat = pd.concat(data_dfs)
-    
-
-    fontname='Times New Roman'
-    plt.rcParams["font.family"] =fontname
-    f_size_title = 20
-    f_size = 16
-
-    fig =plt.figure(figsize=(10,10))
-    fig.subplots_adjust(bottom=0.3)
-    sns.set_style('ticks')
-    ax = sns.violinplot(x="region", y="Values", data=df_concat, palette="pastel")
-    plt.tick_params() #labelsize = 30 #軸ラベルの大きさ
-    plt.title(f"{peri}" , fontname=fontname, size=18) #size=50 #グラフのタイトル
-    plt.ylabel("Sensitivity", fontname = fontname, size=16) #size=50#ｙ軸ラベル
-    ax.set_ylim(0.25, 1.75)
-    plt.xlabel("", fontname=fontname)#x軸ラベルの消去
-    ax.set_xticklabels(ax.get_xticklabels(), fontname=fontname, rotation=80, size=16)
-
-    fig.savefig(out_dir + os.sep + f"sensitivity_violin_region_{peri}.png", dpi=600)
-
-# -------------------------------------
-"""# Violin plot """
-## sensitivity distribution
-# -------------------------------------
-import seaborn as sns
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-# in_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/1_cv/2_cv_sensitivity/_mosaic'
-in_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity\_mosaic"
-out_dir = in_dir
-tifs = glob.glob(in_dir +os.sep +"*.tif")
-tifs = [t for t in tifs if "2002-2022" not in t]
-
-data_dic ={}
-for t in tifs:
-    peri = os.path.basename(t)[:-4].split("_")[-1]
-    with rasterio.open(t) as src:
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
         arr = src.read(1)
-        arr_ = np.ravel(arr)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
     
-    data_dic[peri] = arr_.tolist()
-    # data_dic["2002-2012"] = arr_.tolist()
-    
-# better to convert to df
-df = pd.DataFrame(data_dic)
-df_melted = df.melt(var_name='Period', value_name='Values')
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
 
 fontname='Times New Roman'
-plt.rcParams["font.family"] =fontname
 f_size_title = 20
 f_size = 16
 
-fig =plt.figure()
-sns.set_style('ticks')
-sns.violinplot(x="Period", y="Values", data=df_melted, palette="pastel")
-plt.tick_params() #labelsize = 30 #軸ラベルの大きさ
-# plt.title("Sensitivity" , fontname=fontname) #size=50 #グラフのタイトル
-plt.ylabel("Sensitivity", fontname = fontname, size=16) #size=50#ｙ軸ラベル
-plt.xlabel("", fontname=fontname)#x軸ラベルの消去
+      
+fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+fig.tight_layout()
+src = rasterio.open(tif)
+arr = src.read(1)
+arr_log = np.log10(arr)
+arr_1d = np.ravel(arr)
+arr_1d_log = np.log10(arr_1d)
+# arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+# range_min = arr_1d_nan.min()
+# range_max = arr_1d_nan.max()
+# range_max = 0.5
+range_min = np.percentile(arr_1d_nan, 2)
+range_max = np.percentile(arr_1d_nan, 98)
+cmapget = matplotlib.colormaps.get_cmap('YlGnBu')
+num_colors = 5
+color_indices = np.linspace(0, 1, num_colors)  # 10 evenly spaced values between 0 and 1
+colors = [cmapget(i) for i in color_indices]
+code_list = [mcolors.to_hex(color[:3]) for color in colors]
+cmap = ListedColormap(code_list)
+## color range
+bounds = list(np.linspace(range_min,range_max, num_colors+1)) #should be num_colors in boundaries
+norm = BoundaryNorm(bounds,cmap.N)
+ax.set_extent(extent_lonlat, crs=crs_lonlat)
+cf =show(arr_log, ax=ax, transform=src.transform, cmap=cmap, norm=norm)
+ax.coastlines(linewidth=.5)
+ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+ax.set_xticks([])
+ax.set_yticks([])
+src.close()    
+### set common color bar
+cf_for_bar = cf.get_images()[0] #obtain image information
+cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom')
+plt.savefig(out_dir + os.sep + f'{os.path.basename(tif)[:-4]}_categorical.png', dpi=600)
 
-fig.savefig(out_dir + os.sep + "sensitivity_violin.png", dpi=600)
+
+
+
+# -------------------------------------
+"""# Final: large importance sign change (75%) and also enso decrease"""
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib.pyplot as plt
+import matplotlib
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap, BoundaryNorm, rgb2hex
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
+import os
+import rasterio
+from rasterio.plot import show
+from matplotlib.colors import Normalize
+from matplotlib import colorbar, colors
+import numpy as np
+import math
+plt.rcParams['font.family'] = 'Times New Roman'
+
+# tif = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\timeeffect\sign_change_morethan1_filt.tif"
+tif = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\largechange_enso_1_75.tif"
+out_dir = os.path.dirname(tif) + os.sep + "_png"
+
+### Check arr_log or not!! below
+
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
+        arr = src.read(1)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
+    
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+      
+fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+# plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+fig.tight_layout()
+
+src = rasterio.open(tif)
+arr = src.read(1)
+arr_log = np.log10(arr)
+arr_1d = np.ravel(arr)
+arr_1d_log = np.log10(arr_1d)
+# arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+
+# range_min = arr_1d_nan.min()
+# range_max = arr_1d_nan.max()
+# range_max = 0.5
+range_min = np.percentile(arr_1d_nan, 2)
+range_max = np.percentile(arr_1d_nan, 98)
+# range_min = 0 # for visualization
+
+# fig.suptitle(f"relationshp change to stressed & El Nino damaged", fontsize=f_size_title, fontname=fontname)
+ax.set_extent(extent_lonlat, crs=crs_lonlat)
+# ax.set_title(f"Number of change variable: {i}", va='bottom', fontsize=f_size, fontname=fontname)
+
+# norm = colors.Normalize(vmin=range_min, vmax=range_max)
+cf =show(arr_log, ax=ax, transform=src.transform, cmap='YlGnBu', vmin=range_min, vmax=range_max) #norm = norm  #norm=colors.TwoSlopeNorm(0),  set zero as center
+ax.coastlines(linewidth=.5)
+ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+ax.set_xticks([])
+ax.set_yticks([])
+
+src.close()    
+
+### set common color bar
+cf_for_bar = cf.get_images()[0] #obtain image information
+cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom',
+             )
+
+plt.savefig(out_dir + os.sep + f'{os.path.basename(tif)[:-4]}.png', dpi=600)
+
+
+# -------------------------------------
+"""# Multiple importance sign change (sum) and also enso decrease"""
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
+import os
+import rasterio
+from rasterio.plot import show
+from matplotlib.colors import Normalize
+from matplotlib import colorbar, colors
+import numpy as np
+import math
+plt.rcParams['font.family'] = 'Times New Roman'
+
+# in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\5_and_ENSO\timeeffect"
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\5_and_ENSO"
+out_dir = in_dir + os.sep + "_png"
+
+tifs = glob.glob(in_dir + os.sep + "*sign_change_morethan*enso.tif")
+
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
+        arr = src.read(1)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
+    
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+for var_tifs in tifs:
+    #
+    i = os.path.basename(var_tifs)[:-4].split("_")[-2][-1]
+    #    
+    fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+    # plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    #
+    src = rasterio.open(var_tifs)
+    arr = src.read(1)
+    arr_log = np.log10(arr)
+    arr_1d = np.ravel(arr)
+    arr_1d_log = np.log10(arr_1d)
+    # arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+    arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+    #
+    # range_min = arr_1d_nan.min()
+    # range_max = arr_1d_nan.max()
+    # range_max = 0.5
+    range_min = np.percentile(arr_1d_nan, 10)
+    range_max = np.percentile(arr_1d_nan, 90)
+    # range_min = 0 # for visualization
+    #
+    fig.suptitle(f"relationshp change to stressed & El Nino damaged", fontsize=f_size_title, fontname=fontname)
+    ax.set_extent(extent_lonlat, crs=crs_lonlat)
+    ax.set_title(f"Number of change variable: {i}", va='bottom', fontsize=f_size, fontname=fontname)
+    #
+    # norm = colors.Normalize(vmin=range_min, vmax=range_max)
+    cf =show(arr_log, ax=ax, transform=src.transform, cmap='YlGnBu', vmin=range_min, vmax=range_max) #norm = norm  #norm=colors.TwoSlopeNorm(0),  set zero as center
+    ax.coastlines(linewidth=.5)
+    ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    #
+    src.close()    
+    #
+    ### set common color bar
+    cf_for_bar = cf.get_images()[0] #obtain image information
+    cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+    plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom')
+    #             )
+    #
+    plt.savefig(out_dir + os.sep + f'{os.path.basename(var_tifs)}.png', dpi=600)
+
+
+# -------------------------------------
+"""# Multiple importance sign change (sum) 離散色"""
+# https://geodynamics.sci.hokudai.ac.jp/humet/meteo/tutorial.html
+# https://hackmd.io/@h2tg95D2RP2ed-D8u-49Mg/S1moBqaRr
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap, BoundaryNorm, rgb2hex
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
+import os
+import rasterio
+from rasterio.plot import show
+from matplotlib.colors import Normalize
+from matplotlib import colorbar, colors
+import numpy as np
+import math
+plt.rcParams['font.family'] = 'Times New Roman'
+
+
+# in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\timeeffect"
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels"
+out_dir = in_dir + os.sep + "_png"
+
+tifs = glob.glob(in_dir + os.sep + "*sign_change_morethan*.tif")
+num_vars = [os.path.basename(t)[:-4][-1] for t in tifs]
+
+
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
+        arr = src.read(1)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
+    
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+
+for i in num_vars:
+    #
+    var_tifs = [t for t in tifs if f"morethan{i}" in t][0]
+    #    
+    fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+    fig.tight_layout()
+    #
+    src = rasterio.open(var_tifs)
+    arr = src.read(1)
+    arr_1d = np.ravel(arr)
+    arr_log = np.log10(arr)
+    arr_1d_log = np.log10(arr_1d)
+    # arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+    arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+    #
+    # range_min = arr_1d_nan.min()
+    range_max = arr_1d_nan.max()
+    # range_max = 0.5
+    range_min = np.percentile(arr_1d_nan, 10)
+    range_max = np.percentile(arr_1d_nan, 90)
+    cmapget = matplotlib.colormaps.get_cmap('YlGnBu')
+    num_colors = 5
+    color_indices = np.linspace(0, 1, num_colors)  # 10 evenly spaced values between 0 and 1
+    colors = [cmapget(i) for i in color_indices]
+    code_list = [mcolors.to_hex(color[:3]) for color in colors]
+    cmap = ListedColormap(code_list)
+    ## color range
+    bounds = list(np.linspace(range_min,range_max, num_colors+1)) #should be num_colors in boundaries
+    norm = BoundaryNorm(bounds,cmap.N)
+    #
+    fig.suptitle(f"relationshp change to stressed", fontsize=f_size_title, fontname=fontname)
+    ax.set_extent(extent_lonlat, crs=crs_lonlat)
+    ax.set_title(f"Number of change variable: {i}", va='bottom', fontsize=f_size, fontname=fontname)
+    #
+    cf =show(arr_log, ax=ax, transform=src.transform, cmap=cmap, norm=norm)
+    ax.coastlines(linewidth=.5) #YlGnBu #viridis #winter
+    ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    #
+    src.close()    
+    #
+    ### set common color bar
+    cf_for_bar = cf.get_images()[0] #obtain image information
+    cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+    plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom',)
+    #
+    plt.savefig(out_dir + os.sep + f'{os.path.basename(var_tifs)[:-4]}_categorical.png', dpi=600)
+
+# -------------------------------------
+"""# Multiple importance sign change (sum) 連続色"""
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
+import os
+import rasterio
+from rasterio.plot import show
+from matplotlib.colors import Normalize
+from matplotlib import colorbar, colors
+import numpy as np
+import math
+plt.rcParams['font.family'] = 'Times New Roman'
+
+
+# in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels\timeeffect"
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels"
+out_dir = in_dir + os.sep + "_png"
+
+tifs = glob.glob(in_dir + os.sep + "*sign_change_morethan*.tif")
+num_vars = [os.path.basename(t)[:-4][-1] for t in tifs]
+
+
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
+        arr = src.read(1)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
+    
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+for i in num_vars:
+    #
+    var_tifs = [t for t in tifs if f"morethan{i}" in t][0]
+    #    
+    fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+    # plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    #
+    src = rasterio.open(var_tifs)
+    arr = src.read(1)
+    arr_1d = np.ravel(arr)
+    arr_log = np.log10(arr)
+    arr_1d_log = np.log10(arr_1d)
+    # arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+    arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+    #
+    # range_min = arr_1d_nan.min()
+    range_max = arr_1d_nan.max()
+    # range_max = 0.5
+    range_min = np.percentile(arr_1d_nan, 10)
+    range_max = np.percentile(arr_1d_nan, 90)
+    # range_min = 0 # for visualization
+    #
+    fig.suptitle(f"relationshp change to stressed", fontsize=f_size_title, fontname=fontname)
+    ax.set_extent(extent_lonlat, crs=crs_lonlat)
+    ax.set_title(f"Number of change variable: {i}", va='bottom', fontsize=f_size, fontname=fontname)
+    #
+    # norm = colors.Normalize(vmin=range_min, vmax=range_max) #cmap='cool' #viridis #YlGnBu
+    cf =show(arr_log, ax=ax, transform=src.transform, cmap='YlGnBu', vmin=range_min, vmax=range_max) #norm = norm  #norm=colors.TwoSlopeNorm(0),  set zero as center
+    ax.coastlines(linewidth=.5) #YlGnBu #viridis #winter
+    ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    #
+    src.close()    
+    #
+    ### set common color bar
+    cf_for_bar = cf.get_images()[0] #obtain image information
+    cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+    plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom',
+                 )
+    #
+    plt.savefig(out_dir + os.sep + f'{os.path.basename(var_tifs)[:-4]}.png', dpi=600)
+
+# -------------------------------------
+"""# Importance sign change"""
+# -------------------------------------
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cartopy
+import glob
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable 
+import os
+import rasterio
+from rasterio.plot import show
+from matplotlib.colors import Normalize
+from matplotlib import colorbar, colors
+import numpy as np
+import math
+plt.rcParams['font.family'] = 'Times New Roman'
+
+
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\4_stressed_pixels"
+out_dir = in_dir + os.sep + "_png"
+
+
+tifs = glob.glob(in_dir + os.sep + "*.tif")
+rain_tif = [t for t in tifs if "rain" in t ][0]
+temp_tif = [t for t in tifs if "temp" in t][0]
+VOD_tif = [t for t in tifs if "VOD" in t][0]
+SM_tif = [t for t in tifs if "SM" in t][0]
+# KBDI_tif = [t for t in tifs if "KBDI_importance" in t][0]
+Eb_tif = [t for t in tifs if "Eb" in t][0]
+Et_tif = [t for t in tifs if "Et" in t][0]
+vpd_tif = [t for t in tifs if "VPD" in t][0]
+
+var_dic = {
+    "Precipitation":rain_tif,
+            "Temperature": temp_tif,
+            "VOD":VOD_tif,
+            "Soil moisture":SM_tif,
+            "Evaporation":Eb_tif,
+            "Transpiration":Et_tif,
+            "Vapor Pressure Deficit":vpd_tif
+            }
+
+
+""" # obtain data range """
+def raster_range(tif):
+    with rasterio.open(tif) as src:
+        arr = src.read(1)
+    minval = np.nanmin(arr)
+    maxval = np.nanmax(arr)
+    return minval, maxval
+    
+
+""" # plot """
+
+extent_lonlat = (92, 147, -12, 9)
+crs_lonlat = ccrs.PlateCarree()
+
+fontname='Times New Roman'
+f_size_title = 20
+f_size = 16
+
+for variable, var_tifs in var_dic.items():
+    #
+    fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
+    # plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
+    fig.tight_layout()
+    #
+    src = rasterio.open(var_tifs)
+    arr = src.read(1)
+    arr_log = np.log10(arr)
+    arr_1d = np.ravel(arr)
+    arr_1d_log = np.log10(arr_1d)
+    # arr_1d_nan = arr_1d[~np.isnan(arr_1d)]
+    arr_1d_nan = arr_1d_log[~np.isnan(arr_1d_log)]
+    #
+    # range_min = arr_1d_nan.min()
+    # range_max = arr_1d_nan.max()
+    range_min = np.percentile(arr_1d_nan, 10)
+    range_max = np.percentile(arr_1d_nan, 90)
+    # range_max = 0.1
+    # range_min = 0 # for visualization
+    #
+    fig.suptitle(f"relationshp change to stressed", fontsize=f_size_title, fontname=fontname)
+    ax.set_extent(extent_lonlat, crs=crs_lonlat)
+    ax.set_title(f"{variable}", va='bottom', fontsize=f_size, fontname=fontname)
+    #
+    # norm = colors.Normalize(vmin=range_min, vmax=range_max)
+    cf =show(arr_log, ax=ax, transform=src.transform, cmap='cool', vmin=range_min, vmax=range_max) #norm = norm  #norm=colors.TwoSlopeNorm(0),  set zero as center
+    ax.coastlines(linewidth=.5)
+    ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    #
+    src.close()    
+    #
+    ### set common color bar
+    cf_for_bar = cf.get_images()[0] #obtain image information
+    cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
+    plt.colorbar(cf_for_bar, ax=ax, cax=cbar_ax, orientation="horizontal", location='bottom',
+                 )
+    #
+    plt.savefig(out_dir + os.sep + f'{variable}_sign_chnange.png', dpi=600)
+
+ 
 
 # -------------------------------------
 """# Major variable"""
@@ -157,7 +738,7 @@ import rasterio
 from rasterio.plot import show
 import numpy as np
 
-in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\3_major_variable\timeeffect"
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\3_major_variable"
 out_dir = in_dir
 
 tifs = glob.glob(in_dir + os.sep + "*.tif")
@@ -275,18 +856,16 @@ import rasterio
 from rasterio.plot import show
 import numpy as np
 
-in_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_sum\timeeffect\_mosaic"
-# in_dir = r"D:\Malaysia\02_Timeseries\Resilience\01_ARX\lag_1\_mosaic"
-out_dir = in_dir + os.sep + "_png"
+in_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\1_sum\_mosaic"
+out_dir = in_dir
 
 tifs = glob.glob(in_dir + os.sep + "*.tif")
-tifs = [t for t in tifs if not "difference" in t]
 
 for tif_sensitivity in tifs:
     # tif_sensitivity = r"D:\Malaysia\02_Timeseries\Sensitivity\1_cv\2_cv_sensitivity\_mosaic\mosaic_sensitivity_cv_2002-2022.tif"
-    #
+    
     period_str = os.path.basename(tif_sensitivity)[:-4].split("_")[-1]
-    #
+    
     ## not used here
     # def raster_range(tif):
     #     with rasterio.open(tif) as src:
@@ -294,42 +873,44 @@ for tif_sensitivity in tifs:
     #     minval = np.nanmin(arr)
     #     maxval = np.nanmax(arr)
     #     return minval, maxval
+    
     extent_lonlat = (92, 147, -12, 9)
     crs_lonlat = ccrs.PlateCarree()
-    #
+    
     fontname='Times New Roman'
     f_size_title = 20
     f_size = 16
-    #        
+            
     fig, ax = plt.subplots(figsize=(10,5), subplot_kw={'projection': ccrs.PlateCarree()})
     plt.subplots_adjust(wspace=0.1, hspace=0.1) #hspace=0.2 #マイナス設定ができた
     fig.tight_layout()
-    #   
+       
     src = rasterio.open(tif_sensitivity)
     arr = src.read(1)
-    #
+    
     ## determin min and max of range
     # tif_range = raster_range(tif_sensitivity)
     arr_nan = arr[~np.isnan(arr)]
     # range_min = np.percentile(arr_nan, 2)
     # range_max = np.percentile(arr_nan, 98)
-    range_min = 0.5 #0.5 #0
-    range_max = 1.4 #1.8 #2
-    #    
+    range_min = 0.0 #0.5
+    range_max = 2 #1.8
+    
+    
     fig.suptitle("Sensitivity", fontsize=f_size_title, fontname=fontname)
     ax.set_extent(extent_lonlat, crs=crs_lonlat)
     ax.set_title(period_str, va='bottom', fontsize=f_size, fontname=fontname)
-    #
+    
     # cf = show(src, ax=ax, transform=src.transform, cmap='viridis') #norm=colors.TwoSlopeNorm(0),  set zero as center
     norm = colors.Normalize(vmin=range_min, vmax=range_max)
-    cf = show(arr, ax=ax, transform=src.transform, cmap='viridis', norm=norm) #viridis #t-1: Blues
+    cf = show(arr, ax=ax, transform=src.transform, cmap='viridis', norm=norm)
     ax.coastlines(linewidth=.5)
     ax.add_feature(cfeature.BORDERS, linewidth=.5, linestyle='-', edgecolor='black')
     ax.set_xticks([])
     ax.set_yticks([])
-    #
+    
     src.close()    
-    #  
+      
     ### set common color bar
     base_ax = cf.get_images()[0]
     cbar_ax = fig.add_axes([0.25, 0.05, 0.5, 0.02])
@@ -337,7 +918,7 @@ for tif_sensitivity in tifs:
                  norm=colors.Normalize(vmin=range_min, vmax=range_max),
                  )
     # cbar.ax.tick_params(labelsize=6)
-    #
+    
     filename = os.path.basename(tif_sensitivity)[:-4]
     plt.savefig(out_dir + os.sep + f'{filename}.png', dpi=600)
 
@@ -452,9 +1033,6 @@ for variable, var_tifs in var_dic.items():
     
     plt.savefig(out_dir + os.sep + f'{variable}_CV_2002-2022.png', dpi=600)
 
-
-
-
 # -------------------------------------
 """# Relative importance"""
 # -------------------------------------
@@ -471,10 +1049,8 @@ from matplotlib.colors import Normalize
 from matplotlib import colorbar, colors
 import numpy as np
 
-# in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\_mosaic"
-# out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\_mosaic\_png"
-in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\timeeffects\_mosaic"
-out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\timeeffects\_mosaic\_png"
+in_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\_mosaic"
+out_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\2_out_ras\p_01\_mosaic\_png"
 
 
 tifs = glob.glob(in_dir + os.sep + "*.tif")
