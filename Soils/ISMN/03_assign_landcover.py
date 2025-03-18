@@ -14,7 +14,8 @@ from shapely.geometry import Point
 import numpy as np
 from collections import Counter
 from tqdm import tqdm
-os.chdir(r"C:\Users\chihiro\Desktop\Python\MODIS_LandCover")
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\MODIS_LandCover")
+os.chdir('/Users/wtakeuchi/Desktop/Python/MODIS_LandCover')
 import _02_extract_classes
 
 """ #Class
@@ -31,13 +32,21 @@ import _02_extract_classes
 """
 classes=[10,20,30,41,42,43,50,60,70,99]
 
-csv_meta = r"F:\MAlaysia\Soil\ISMN\00_download\ALL_Vegetation\python_metadata\Data_separate_files_header_20020101_20231231_10469_QyDr_20250215.csv"
-vegesite = r"F:\MAlaysia\Soil\ISMN\02_shp\vegesite.shp"
-amsr_grid = r"F:\MAlaysia\Soil\AMSR_retrieval\00_prepartation\amsr_grid_vegepoints.shp"
-IGBP_dir = r"F:\MAlaysia\MODIS_IGBP\ISMN_grids"
-palm_grid = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\Grid_OilPalm2016-2021\Grid_OilPalm2016-2021.shp"
-palm_dir = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP"
-out_dir = r"F:\MAlaysia\Soil\ISMN\03_landcover"
+# csv_meta = r"/Volumes/PortableSSD/Malaysia\Soil\ISMN\00_download\ALL_Vegetation\python_metadata\Data_separate_files_header_20020101_20231231_10469_QyDr_20250215.csv"
+# vegesite = r"/Volumes/PortableSSD/Malaysia\Soil\ISMN\02_shp\vegesite.shp"
+# amsr_grid = r"/Volumes/PortableSSD/Malaysia\Soil\AMSR_retrieval\00_prepartation\amsr_grid_vegepoints.shp"
+# IGBP_dir = r"/Volumes/PortableSSD/Malaysia\MODIS_IGBP\ISMN_grids"
+# palm_grid = r"/Volumes/PortableSSD/Malaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\Grid_OilPalm2016-2021\Grid_OilPalm2016-2021.shp"
+# palm_dir = r"/Volumes/PortableSSD/Malaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP"
+# out_dir = r"/Volumes/PortableSSD/Malaysia\Soil\ISMN\03_landcover"
+
+csv_meta = '/Volumes/PortableSSD/Malaysia/Soil/ISMN/00_download/ALL_Vegetation/python_metadata/Data_separate_files_header_20020101_20231231_10469_QyDr_20250215.csv'
+vegesite = "/Volumes/PortableSSD/Malaysia/Soil/ISMN/02_shp/vegesite.shp"
+amsr_grid = "/Volumes/PortableSSD/Malaysia/Soil/AMSR_retrieval/00_prepartation/amsr_grid_vegepoints.shp"
+IGBP_dir = "/Volumes/PortableSSD/Malaysia/MODIS_IGBP/ISMN_grids"
+palm_grid = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/Grid_OilPalm2016-2021/Grid_OilPalm2016-2021.shp"
+palm_dir = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP"
+out_dir = "/Volumes/PortableSSD/Malaysia/Soil/ISMN/03_landcover"
 
 df_csv = pd.read_csv(csv_meta, header=[0,1]) #ISMN vegesites
 df_csv_use = df_csv.loc[:,[('latitude','val'), ('longitude','val'), ('network','val'), ('station','val'),
@@ -135,4 +144,21 @@ for i, metadt in tqdm(df_csv_use.iterrows(), total=len(df_csv_use)):
 df_concat = pd.concat(results)
 df_concat = df_concat.reset_index(drop=True)
 df_concat.to_csv(out_dir + os.sep + "stations_landcover.csv")
+
+
+# -------------------------------------------------
+"""# Finally assign dominant lc""" 
+# -------------------------------------------------
+df_concat_ = df_concat.copy(deep=True)
+df_concat['LC'] =''
+
+for i, row in df_concat_.iterrows():
+    row
+    row_use = row.drop(['network','station','gridcode'])
+    row_lc = row_use[row_use!=0]
+    lc_major = row_lc.idxmax()
+    df_concat.at[i,'LC'] = str(lc_major)
+
+df_concat.to_csv(out_dir + os.sep + "stations_landcover.csv")
+
     
