@@ -16,7 +16,6 @@ import os
 41:forest 常緑
 42:forest 落葉
 43:forest 混合
-44:forest サバンナ
 50:water
 60:barren
 70:snow
@@ -34,8 +33,8 @@ def main(tif):
         5: 43, #mix
         6: 30, #shrub
         7: 30,
-        8: 44,
-        9: 44,
+        8: 41, #evergreen forest
+        9: 10, #Grasslands
         10:10, #Grasslands
         11:50, #wetland
         12:20, #cropland
