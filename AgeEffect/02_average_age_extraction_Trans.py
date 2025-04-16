@@ -14,15 +14,15 @@ from tqdm import tqdm
 import pandas as pd
 # from collections import Counter
 
-# grid_shp = r"F:\MAlaysia\AgeEffect\01_test_points\GOSIF_grid_ori_palm.shp"
-# age_tif = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\GlobalOilPalm_OP-YoP_mosaic100m.tif"
-# age_shp = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\shp\GlobalOilPalm_OP-YoP_mosaic100m.shp"
-# out_dir = r"F:\MAlaysia\AgeEffect\01_test_points"
+grid_shp = r"F:\MAlaysia\GLEAM\02_tif_v41\Et\_grid\Et_2000001_grid.shp"
+age_tif = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\GlobalOilPalm_OP-YoP_mosaic100m.tif"
+age_shp = r"F:\MAlaysia\AOI\High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019\GlobalOilPalm_OP-YoP\Malaysia_Indonesia\shp\GlobalOilPalm_OP-YoP_mosaic100m.shp"
+out_dir = r"F:\MAlaysia\AgeEffect\01_test_points"
 
-grid_shp = "/Volumes/Samsung_X5/AMSR_retrieval/00_rasvals/_grid/AMSRE_20020619_D.6.9_crop_grid_blocks.shp"
-age_tif = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif"
-age_shp = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/shp/GlobalOilPalm_OP-YoP_mosaic100m.shp"
-out_dir = "/Volumes/Samsung_X5/AMSR_retrieval/99_palmage"
+# grid_shp = "/Volumes/Samsung_X5/AMSR_retrieval/00_rasvals/_grid/AMSRE_20020619_D.6.9_crop_grid_blocks.shp"
+# age_tif = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/GlobalOilPalm_OP-YoP_mosaic100m.tif"
+# age_shp = "/Volumes/PortableSSD/Malaysia/AOI/High_resolution_global_industrial_and_smallholder_oil_palm_map_for_2019/GlobalOilPalm_OP-YoP/Malaysia_Indonesia/shp/GlobalOilPalm_OP-YoP_mosaic100m.shp"
+# out_dir = "/Volumes/Samsung_X5/AMSR_retrieval/99_palmage"
 
 gdf_grid = gpd.read_file(grid_shp)
 gdf_palm = pg.read_dataframe(age_shp)
