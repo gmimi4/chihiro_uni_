@@ -6,15 +6,16 @@
 
 import numpy as np
 import pandas as pd
-import os,sys
+import os
 import glob
 from datetime import datetime
-import datetime
-from dateutil.relativedelta import relativedelta
-import calendar
-import itertools
-from tqdm import tqdm
 import rasterio
+from rasterio.plot import show
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
+import matplotlib.colors as colors
+from matplotlib import cm
 # os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\ENSO")
 os.chdir("/Users/wtakeuchi/Desktop/Python/ANALYSIS/ENSO")
 import _ENSOperiod
@@ -57,7 +58,8 @@ def generate_seasonal_meanras(datelist, seastr):
         with rasterio.open(t) as src:
             meta = src.meta
             arr = src.read(1)
-            arrs_seas.append(arr)
+            arr_re = np.where(arr==0, np.nan, arr) 
+            arrs_seas.append(arr_re)
 
     arr_stack = np.stack(arrs_seas)
     arr_seas_mean_ = np.nanmean(arr_stack, axis=0) #seasonal mean
@@ -104,6 +106,46 @@ for el, el_date in ENSO_date_dic.items():
             
             
 
-                
-        
+
+# ---------------
+""" # Plot"""
+# ---------------
+shp_region = '/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp'
+# tif = '/Volumes/PortableSSD/Malaysia/ENSO/01_deviations/EVI/elnino_devi_all.tif'
+gdf = gpd.read_file(shp_region)
+# gdf = gdf.to_crs(raster_crs)
+
+
+def plot_devi(tif):
+    out_dir = os.path.dirname(tif) + os.sep + "_png"
+    """ # obtain data range """
+    with rasterio.open(tif) as src:
+        bounds = src.bounds
+        transform = src.transform
+        raster_crs = src.crs
+        arr = src.read(1)
+        arr_1d = np.ravel(arr)
+        arr_1d = arr_1d[~np.isnan(arr_1d)]
+        # minval = np.nanmin(arr)
+        # maxval = np.nanmax(arr)
+        minval = np.percentile(arr_1d, 5)
+        maxval = np.percentile(arr_1d, 95)
+    norm = TwoSlopeNorm(vmin=minval, vcenter=0, vmax=maxval)
+    
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cmap = cm.get_cmap('coolwarm').copy()
+    cmap.set_bad(color='none')  # na
+    img = ax.imshow(arr, cmap='coolwarm', norm=norm, extent=[bounds.left, bounds.right, bounds.bottom, bounds.top], origin='upper')
+    gdf.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
+    cbar = plt.colorbar(img, ax=ax, shrink=0.7, orientation='horizontal', pad=0.07)
+    cbar.set_label("EVI anomaly [-]", fontsize=25)
+    cbar.ax.tick_params(labelsize=20)
+    ax.tick_params(axis='both', labelsize=20)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(out_dir + os.sep + f'{os.path.basename(tif)[:-4]}.png', dpi=600)
+    
+
+plot_devi('/Volumes/PortableSSD/Malaysia/ENSO/01_deviations/EVI/elnino_devi_all.tif')      
+plot_devi('/Volumes/PortableSSD/Malaysia/ENSO/01_deviations/EVI/lanina_devi_all.tif')        
 
