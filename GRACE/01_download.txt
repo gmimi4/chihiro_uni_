@@ -1,0 +1,4 @@
+https://podaac.jpl.nasa.gov/dataset/TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4#capability-modal-download
+
+podaac-data-downloader -c TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4 -d F:\MAlaysia\GRACE\01_download --start-date 2002-04-04T00:00:00Z --end-date 2023-12-31T00:00:00Z -b="93,-12,142,9"
+
