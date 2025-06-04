@@ -21,12 +21,10 @@ import _csv_to_dataframe
 import _find_csvs
 plt.rcParams['font.family'] = "DejaVu Sans"#'Times New Roman' #"DejaVu Sans" #default
 
-pp="_regionalmean"
+
 enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-pearson_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-# var_csv_dir = r"F:\MAlaysia\ANALYSIS\02_Timeseries\CPA_CPR\1_vars_at_pixels_until2023"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean"
+out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean_LaNina"
 mean_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean\EVI"
 
 # enso_csv = '/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv'
@@ -79,7 +77,8 @@ for year, row in df_mei.iterrows():
             neutral_list.append([year, colname])
 
 ## filtering period
-elnino_list = [e for e in elnino_list if (int(e[0])>=startdate.year)&(int(e[0])<=enddate.year)]
+# elnino_list = [e for e in elnino_list if (int(e[0])>=startdate.year)&(int(e[0])<=enddate.year)]
+elnino_list = [e for e in lanina_list if (int(e[0])>=startdate.year)&(int(e[0])<=enddate.year)]
 
 """ # convert mei str to datetime """
 def convert_mei_date(mei_list):
@@ -337,7 +336,7 @@ for regi in tqdm(regions):
             # non enso or non iod
             df_plot_non = result[[f"{var}non",f"{var}nonstd"]].sort_index()
             if ei =="ENSO":
-                lavel_ei = "ElNino"
+                lavel_ei = "La Nina"
             ax.errorbar(df_plot.index, df_plot[var].values, yerr=df_plot[f"{var}std"].values, 
                         label = f"average during {lavel_ei}",color='black', fmt='-o', capsize=3)
             ax.errorbar(df_plot_non.index, df_plot_non[f"{var}non"].values, yerr=df_plot_non[f"{var}nonstd"].values, 
@@ -360,10 +359,10 @@ for regi in tqdm(regions):
                 j,p
                 if p < 0.05:
                     ax.text(j+1, df_plot[var].iloc[j] + df_plot[f"{var}std"].iloc[j] + 0.02, '**',
-                            ha='center', va='bottom', fontsize=14, color='red')
+                            ha='center', va='bottom', fontsize=14, color='blue')
                 elif p < 0.1:
                     ax.text(j + 1, df_plot[var].iloc[j] + df_plot[f"{var}std"].iloc[j] + 0.02, '*',
-                            ha='center', va='bottom', fontsize=14, color='red')
+                            ha='center', va='bottom', fontsize=14, color='blue')
             ## If add a,b,c,..
             # ax.text(0.01, -0.25, subplot_labels[i], transform=ax.transAxes,
             #         fontsize=18, fontweight='bold', va='center', ha='left')
