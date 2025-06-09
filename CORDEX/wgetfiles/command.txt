@@ -1,0 +1,21 @@
+OpenID:
+https://esg-dn1.nsc.liu.se/esgf-idp/openid/chihiro_naito
+6668@EsGf
+
+cd E:/Malaysia/GCM/CORDEX/00_download/wgetfiles/Temperature/HadGEM2
+chmod 744 cordex.output.SEA-22.SMHI.MOHC-HadGEM2-ES.historical.r1i1p1.RCA4.v1.mon.tas.sh
+./cordex.output.SEA-22.SMHI.MOHC-HadGEM2-ES.historical.r1i1p1.RCA4.v1.mon.tas.sh -H
+
+
+cd E:/Malaysia/GCM/CORDEX/00_download/wgetfiles/Temperature/HadGEM2
+chmod 744 cordex.output.SEA-22.SMHI.MOHC-HadGEM2-ES.rcp45.r1i1p1.RCA4.v1.mon.tas.sh
+./cordex.output.SEA-22.SMHI.MOHC-HadGEM2-ES.rcp45.r1i1p1.RCA4.v1.mon.tas.sh -H
+
+
+cd E:/Malaysia/GCM/CORDEX/00_download/wgetfiles/Temperature/HadGEM2
+chmod 744 cordex.output.SEA-22.SMHI.CNRM-CERFACS-CNRM-CM5.rcp85.r1i1p1.RCA4.v1.mon.tas.sh
+./cordex.output.SEA-22.SMHI.CNRM-CERFACS-CNRM-CM5.rcp85.r1i1p1.RCA4.v1.mon.tas.sh -H
+
+
+
+
