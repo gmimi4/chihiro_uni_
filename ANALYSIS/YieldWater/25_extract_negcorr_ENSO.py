@@ -7,13 +7,16 @@ import pandas as pd
 import glob
 import geopandas as gpd
 
+use_corr = "all" #neg # select for target months when ENSO corr is neg or regardless corr
 dir_enso = r"D:\Malaysia\02_Timeseries\YieldWater\06_correlation_timelag_ENSO\_pearson_detr_0"
-dir_corr = r"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\_pearson_detr_0"
+pp = "_regionalmean"
+dir_corr = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 dir_ano = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean\_sig_anomaly"
 dir_anolani = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean_LaNina\_sig_anomaly"
 dir_mean = r"D:\Malaysia\02_Timeseries\YieldWater\12_mean_sd_plot"
 csv_sample = rf"D:\Malaysia\02_Timeseries\YieldWater\sample_order.csv"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\15_extract_corr_ENSO"
+out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\15_extract_corr_ENSO\{pp}\{use_corr}"
+os.makedirs(out_dir, exist_ok=True)
 
 csvs_enso = glob.glob(dir_enso + os.sep + "*.csv")
 csvs_corr = glob.glob(dir_corr + os.sep + "*_abs.csv")
@@ -54,60 +57,63 @@ for el, csvsano in dic_ano.items():
         region = os.path.basename(csvf_enso)[:-4].split("_")[1]
         csvf_corr = dir_corr + os.sep + f"peason_{region}_abs.csv"
         df_enso = pd.read_csv(csvf_enso, index_col=0)
-        df_corr = pd.read_csv(csvf_corr, index_col=0)
-        df_corr = df_corr.drop(["GOSIF"],axis=1)
+        df_corr = pd.read_csv(csvf_corr, index_col=0) #monthly corr
         
-        """ # period when enso corr is significant"""
         df_enso_sig = df_enso[df_enso.ENSO != 0]
         if len(df_enso_sig)==0:
             continue
-        else:
-            """ # obtain mon index"""
-            index_sig = df_enso_sig.index.to_list()
-            """ # obtain climate corr for these index"""
-            df_corr_sig = df_corr.loc[index_sig]
-            # df_corr_sig.to_csv(out_dir + os.sep + f"{region}_sigenso.csv")
+        
+        """ # select months for calc risk"""
+        if use_corr =="neg":    
+            """ # period when enso corr is significant"""
+            index_sig = df_enso_sig.index.to_list() # obtain mon index
+        if use_corr =="all":
+            index_sig = list(month_index.keys()) #all 24 months
             
-            # -------------------------------------
-            """ # Extract anomly when negative ENSO impact"""
-            # -------------------------------------
-            csvf_ano = [c for c in csvsano if os.path.basename(c)[:-4].split("_")[0].replace(" ","")==region][0]
-            df_ano = pd.read_csv(csvf_ano, index_col=0)
-            index_sig_num = [month_index[m] for m in index_sig] # convert to numeric month
-            index_sig_num = index_sig_num
-            df_ano_sig = df_ano.loc[index_sig_num]
-            # df_ano_sig.to_csv(out_dir + os.sep + f"{region}_sigenso.csv")
-            
-            # -------------------------------------
-            """ # Calc impact like risk
-                # climate corr * sig anomaly = negative is risk/impact """
-            # -------------------------------------
-            df_risk = df_corr_sig.copy(deep=True) # for final risk result
-            df_risk[:] = 0
-            for monstr, row in df_corr_sig.iterrows():
-                mon_num = month_index[monstr]
-                for var in varlist:
-                    anoval = df_ano_sig.loc[mon_num,f"{var}anovalid"]
-                    anoval_ratio = anoval / (mean_dic[var].loc[region,"mean"]) #make ratio
-                    corrval = row.loc[var] #row is series
-                    risk = anoval_ratio * corrval
-                    try:
+        """ # obtain climate corr for these index"""
+        df_corr_sig = df_corr.loc[index_sig]
+        # df_corr_sig.to_csv(out_dir + os.sep + f"{region}_sigenso.csv")
+        
+        # -------------------------------------
+        """ # Extract anomly when negative ENSO impact"""
+        # -------------------------------------
+        csvf_ano = [c for c in csvsano if os.path.basename(c)[:-4].split("_")[0].replace(" ","")==region][0]
+        df_ano = pd.read_csv(csvf_ano, index_col=0)
+        index_sig_num = [month_index[m] for m in index_sig] # convert to numeric month
+        index_sig_num = index_sig_num
+        df_ano_sig = df_ano.loc[index_sig_num]
+        # df_ano_sig.to_csv(out_dir + os.sep + f"{region}_sigenso.csv")
+        
+        # -------------------------------------
+        """ # Calc impact like risk
+            # climate corr * sig anomaly = negative is risk/impact """
+        # -------------------------------------
+        df_risk = df_corr_sig.copy(deep=True) # for final risk result
+        df_risk[:] = 0
+        for monstr, row in df_corr_sig.iterrows():
+            mon_num = month_index[monstr]
+            for var in varlist:
+                anoval = df_ano_sig.loc[mon_num,f"{var}anovalid"]
+                anoval_ratio = anoval / (mean_dic[var].loc[region,"mean"]) #make ratio
+                corrval = row.loc[var] #row is series
+                risk = anoval_ratio * corrval
+                try:
+                    df_risk.loc[monstr,var] = risk
+                except:
+                    print(region)
+                    if len(risk)==2: #e.g. Jun and Jun_1 selected but anomaly is calculated only one Jun
+                        risk = risk.iloc[0]
                         df_risk.loc[monstr,var] = risk
-                    except:
-                        print(region)
-                        if len(risk)==2: #e.g. Jun and Jun_1 selected but anomaly is calculated only one Jun
-                            risk = risk.iloc[0]
-                            df_risk.loc[monstr,var] = risk
-                        else:
-                            print("something wrong")
-            
-            outname =  f"{region}_riskmatrix_{el}.csv"
-            df_risk.to_csv(out_dir + os.sep + outname)
-            
-            df_risk_overall = df_risk.sum(axis=0).to_frame()
-            df_risk_overall = df_risk_overall.T
-            df_risk_overall = df_risk_overall.rename(index={0:region})
-            overall.append(df_risk_overall)
+                    else:
+                        print("something wrong")
+        
+        outname =  f"{region}_riskmatrix_{el}.csv"
+        df_risk.to_csv(out_dir + os.sep + outname)
+        
+        df_risk_overall = df_risk.sum(axis=0).to_frame()
+        df_risk_overall = df_risk_overall.T
+        df_risk_overall = df_risk_overall.rename(index={0:region})
+        overall.append(df_risk_overall)
             
             
     df_overall = pd.concat(overall)
@@ -121,6 +127,7 @@ for el, csvsano in dic_ano.items():
     df_overall_fin = pd.concat([df_overall, df_overall_copy_scale],axis=1)
     
     out_dir_overall = out_dir + os.sep + "_overall"
+    os.makedirs(out_dir_overall, exist_ok=True)
     outname =  f"_overall_{el}.csv"
     df_overall_fin.to_csv(out_dir_overall + os.sep + outname)
     

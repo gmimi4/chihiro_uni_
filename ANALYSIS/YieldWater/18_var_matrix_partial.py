@@ -13,14 +13,14 @@ import scipy.stats as stats
 from matplotlib.colors import TwoSlopeNorm
 import pingouin as pg
 
-monthly_mean_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean\EVI"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\11_var_matrix\_partial"
-# os.makedirs(out_dir, exist_ok=True)
+monthly_mean_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean\EVI_allage"
+out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\11_var_matrix\_palmall\_partial"
+os.makedirs(out_dir, exist_ok=True)
 
 months = [m+1 for m in range(12)]
 
 ## sample for region order
-csv_sample = r"D:\Malaysia\02_Timeseries\YieldWater\03_var_variation\_pearson_neg\std_slope.csv"
+csv_sample = r"D:\Malaysia\02_Timeseries\YieldWater\sample_order.csv"
 df_sample = pd.read_csv(csv_sample,index_col=0)
 df_sample.index = df_sample.index.str.replace(" ", "", regex=False)
 
@@ -49,6 +49,7 @@ def heatmap(cov_matrix,keyname):
 
 def partial_matrix(df):
     cov_matrix = pd.DataFrame(index=df.columns, columns=df.columns)
+    p_matrix = pd.DataFrame(index=df.columns, columns=df.columns)
     for var1 in df.columns:
         for var2 in df.columns:
             if var1 == var2:
@@ -57,10 +58,12 @@ def partial_matrix(df):
                 control_vars = [col for col in df.columns if col not in [var1, var2]]
                 result = pg.partial_corr(data=df, x=var1, y=var2, covar=control_vars)
                 cov_matrix.loc[var1, var2] = result['r'].values[0]
+                p_matrix.loc[var1, var2] = result['p-val'].values[0]
     
     cov_matrix = cov_matrix.astype(float)
+    p_matrix = p_matrix.astype(float)
     
-    return cov_matrix
+    return cov_matrix, p_matrix
     
     
 for csvfile in tqdm(csvs):
@@ -94,14 +97,15 @@ for csvfile in tqdm(csvs):
     # Compute the covariance matrix
     df_csv_remove_z = rename_df(df_csv_remove_z)
     # cov_matrix = df_csv_remove_z.cov()
-    cov_matrix = partial_matrix(df_csv_remove_z)
-    heatmap(cov_matrix,"ori")
+    cov_matrix, p_matrix = partial_matrix(df_csv_remove_z)
+    heatmap(cov_matrix,"ano") #mistook... 
+    p_matrix.to_csv(out_dir + os.sep + f"{regi}_ano_pval.csv")
     
     df_csv_z = rename_df(df_csv_z)
     # cov_matrix = df_csv_z.cov()
-    cov_matrix = partial_matrix(df_csv_z)
-
-    heatmap(cov_matrix,"anomaly")
+    cov_matrix, p_matrix = partial_matrix(df_csv_z)
+    heatmap(cov_matrix,"ori")
+    p_matrix.to_csv(out_dir + os.sep + f"{regi}_ori_pval.csv")
     
     
     
