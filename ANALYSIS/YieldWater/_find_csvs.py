@@ -16,14 +16,26 @@ import geopandas as gpd
     #gdf_grid,
     #list_palm, 
     #var_csv_dir
+# def find_page(gdfpoi, gdf_extent):
+#     for i,row in gdf_extent.iterrows():
+#         grid = row.geometry
+#         if gdfpoi.within(grid).values[0]: #if point is on the line, it's false
+#             page = row.PageName
+#         else:
+#             if gdfpoi.intersects(grid).values[0]: #if point is on the line, it's false
+#                 page = row.PageName
+#     return page
 def find_page(gdfpoi, gdf_extent):
-    for i,row in gdf_extent.iterrows():
-        grid = row.geometry
+    # for i,row in gdf_extent.iterrows():
+    for A,row in extent_polygons.items():
+        # grid = row.geometry
+        grid = row.geometry.values[0]
         if gdfpoi.within(grid).values[0]: #if point is on the line, it's false
-            page = row.PageName
+            page = row.PageName.values[0]
         else:
-            if gdfpoi.intersects(grid).values[0]: #if point is on the line, it's false
-                page = row.PageName
+            # if gdfpoi.intersects(grid).values[0]: #if point is on the line, it's false
+            #     page = row.PageName.values[0]
+            continue
     return page
 
 def find_index(gdfpoi, pagenum, gdf_A_dic):

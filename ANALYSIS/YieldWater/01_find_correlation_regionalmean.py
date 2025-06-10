@@ -21,34 +21,33 @@ import glob
 import numpy as np
 from statistics import mean
 import math
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
-# os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater')
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater')
 import _csv_to_dataframe
 import _yield_csv
 
 pp = "_regionalmean"
-yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
-yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
-shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
-shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
-shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index_EVI"
-shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_491.shp"
-palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_491.txt" #all palm
-out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
-os.makedirs(out_dir, exist_ok=True)
-
-mean_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean\EVI_allage"
-
-# yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
-# yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
-# shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
-# shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
-# shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
-# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-# palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
-# var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
-# out_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
+# yield_csv_malay = r"D:\Malaysia\Validation\1_Yield_doc\Malaysia\Malaysia.csv"
+# yield_csv_indone = r"D:\Malaysia\Validation\1_Yield_doc\Indonesia\Indonesia_CPO.csv"
+# shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# shp_extent = r"F:\MAlaysia\AOI\extent\Malaysia_and_Indonesia_extent_divided.shp"
+# shp_01grid_dir = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index_EVI"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_491.shp"
+# palm_txt2002 = r"D:\Malaysia\02_Timeseries\Sensitivity\0_palm_index\grid_01degree_210_491.txt" #all palm
+# out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 # os.makedirs(out_dir, exist_ok=True)
+
+# mean_dir = r"D:\Malaysia\02_Timeseries\CCM\01_region_mean\EVI_allage"
+mean_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CCM/01_region_mean/EVI_allage'
+
+yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
+yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index_EVI"
+# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_491.shp"
+palm_txt2002 = shp_01grid_dir + os.sep + "palm_index_shape_210_491.txt" #This is all age palm >10%
+out_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
+os.makedirs(out_dir, exist_ok=True)
     
 
 """ prepare Yield df"""
@@ -235,8 +234,8 @@ for i, row in tqdm(gdf_region.iterrows()):
 
         
 """ # from CSV"""
-# csv_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
-csv_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
+csv_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
+# csv_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 csvs = glob.glob(csv_dir + os.sep + "*_abs.csv")
 
 varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD'] #'GOSIF', 

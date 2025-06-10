@@ -21,8 +21,8 @@ import glob
 import numpy as np
 from statistics import mean
 import math
-os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
-# os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater')
+# os.chdir(r"C:\Users\chihiro\Desktop\Python\ANALYSIS\YieldWater")
+os.chdir('/Users/wtakeuchi/Desktop/Python/ANALYSIS/YieldWater')
 import _csv_to_dataframe
 import _yield_csv
 
@@ -38,16 +38,16 @@ shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
 out_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 # os.makedirs(out_dir, exist_ok=True)
 
-# yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
-# yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
-# shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
+yield_csv_malay = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Malaysia/Malaysia.csv"
+yield_csv_indone = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/Indonesia/Indonesia_CPO.csv"
+shp_region = "/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp"
 # shp_extent = "/Volumes/PortableSSD/Malaysia/AOI/extent/Malaysia_and_Indonesia_extent_divided.shp"
-# shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index"
-# shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_496.shp"
-# palm_txt2002 = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index/grid_01degree_210_496_palm2002.txt"
-# var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_until2023"
-# out_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
-# os.makedirs(out_dir, exist_ok=True)
+shp_01grid_dir = "/Volumes/SSD_2/Malaysia/02_Timeseries/Sensitivity/0_palm_index_EVI"
+shp_grid = shp_01grid_dir + os.sep + "grid_01degree_210_491.shp"
+palm_txt2002 = shp_01grid_dir + os.sep + "palm_index_shape_210_491.txt" #This is all age palm >10%
+var_csv_dir = "/Volumes/PortableSSD/Malaysia/ANALYSIS/02_Timeseries/CPA_CPR/1_vars_at_pixels_EVI"
+out_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
+os.makedirs(out_dir, exist_ok=True)
     
 
 """ prepare Yield df"""
@@ -60,13 +60,19 @@ year_list = [y for y in range(2002,2024,1)]
 """ set gdf """
 gdf_region = gpd.read_file(shp_region)
 gdf_grid = gpd.read_file(shp_grid)
-gdf_extent = gpd.read_file(shp_extent)
+# gdf_extent = gpd.read_file(shp_extent) #not this
 
 gdf_A1 = gpd.read_file(shp_01grid_dir + os.sep + f"grid_01degree_A1.shp")
 gdf_A2 = gpd.read_file(shp_01grid_dir + os.sep + f"grid_01degree_A2.shp")
 gdf_A3 = gpd.read_file(shp_01grid_dir + os.sep + f"grid_01degree_A3.shp")
 gdf_A4 = gpd.read_file(shp_01grid_dir + os.sep + f"grid_01degree_A4.shp")
 gdf_A_dic = {"A1":gdf_A1, "A2":gdf_A2, "A3":gdf_A3, "A4":gdf_A4}
+
+extent_polygons ={}
+for A, gf in gdf_A_dic.items():
+    dissolved = gf.dissolve()
+    dissolved['PageName']=A
+    extent_polygons[A] =dissolved
 
 """ set palm """
 df_palm = pd.read_csv(palm_txt2002, header=None)
@@ -75,13 +81,16 @@ list_palm = df_palm[0].values.tolist()
 
 """ # def to extract target A* csv file"""
 def find_page(gdfpoi):
-    for i,row in gdf_extent.iterrows():
-        grid = row.geometry
+    # for i,row in gdf_extent.iterrows():
+    for A,row in extent_polygons.items():
+        # grid = row.geometry
+        grid = row.geometry.values[0]
         if gdfpoi.within(grid).values[0]: #if point is on the line, it's false
-            page = row.PageName
+            page = row.PageName.values[0]
         else:
-            if gdfpoi.intersects(grid).values[0]: #if point is on the line, it's false
-                page = row.PageName
+            # if gdfpoi.intersects(grid).values[0]: #if point is on the line, it's false
+            #     page = row.PageName.values[0]
+            continue
     return page
 
 def find_index(gdfpoi, pagenum):
@@ -193,10 +202,10 @@ def calc_peason(df_csv_):
 """ Process by region """
 #--------------------------------
    
-varlist = ['GOSIF', 'rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
+varlist = ['rain', 'temp', 'VPD', 'Et', 'Eb', 'SM', 'VOD']
 month_calendar = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec" }
-units = {'GOSIF':"W/m2/μm/sr/month", 'rain':"mm", 'temp':"degreeC", 
-          'VPD':"hPa", 'Et':"mm/day", 'Eb':"mm/day", 'SM':"m3/m3", 'VOD':""}
+units = {'rain':"mm", 'temp':"degreeC", 
+          'VPD':"hPa", 'Et':"mm", 'Eb':"mm", 'SM':"m3/m3", 'VOD':""}
 newvarlist = {'rain':"Rain", 'temp':"Temp", 'VPD':"VPD", 'Et':"Trans", 'Eb':"Evapo", 'SM':"SM", 'VOD':"VOD"}
 
 for i, row in tqdm(gdf_region.iterrows()):
@@ -253,47 +262,47 @@ for i, row in tqdm(gdf_region.iterrows()):
         
         """ # Plot by var"""
         
-        fig,axes = plt.subplots(4,2, figsize=(8, 8))
-        fig.subplots_adjust(hspace=0.5)  
-        for i,var in enumerate(varlist):
-            row, col = divmod(i, 2)
-            ax = axes[row, col]
-            # ax = axes[i]
-            ax.errorbar(df_peason_region_mean.index, df_peason_region_mean[var].values, 
-                        yerr=df_peason_region_std[f"{var}"].values, color='blue', ecolor="lightgrey",
-                        label = f"{var}",  fmt='-o', capsize=1)
-            ax.tick_params(axis='y', labelsize=10)
-            ax.set_ylabel(f"Pearson_{var}", fontsize = 16)
-            ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
-            ax.set_ylim(-1,1) #(0,1)
-            # if i == len(varlist)-1:
-            # if (row ==1&col==0)or(row ==2&col==1):
-            # if i==6 or i==7: #諦め
-            ax.tick_params(axis='x', labelsize=10)
-            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-            # else:
-            #     ax.tick_params(axis='x', labelsize=0)
-            if (row ==3)&(col==1):
-                fig.delaxes(ax)
-                # ax.set_visible(False)
-                # for spine in ax.spines.values():
-                #     spine.set_visible(False)
-            if i ==0:
-                ax.set_title(f"{reginame} pearson correlaton")
-            # fig.delaxes(axes[3,1])
-        axes[3, 1].set_axis_off()
-        plt.tight_layout()
-        ### Export fig
-        out_dir_fig = out_dir + os.sep + "_png"
-        os.makedirs(out_dir_fig, exist_ok=True)
-        fig.savefig(out_dir_fig + os.sep + f"{regioname_fin}{pp}.png")
-        plt.close()
+        # fig,axes = plt.subplots(4,2, figsize=(8, 8))
+        # fig.subplots_adjust(hspace=0.5)  
+        # for i,var in enumerate(varlist):
+        #     row, col = divmod(i, 2)
+        #     ax = axes[row, col]
+        #     # ax = axes[i]
+        #     ax.errorbar(df_peason_region_mean.index, df_peason_region_mean[var].values, 
+        #                 yerr=df_peason_region_std[f"{var}"].values, color='blue', ecolor="lightgrey",
+        #                 label = f"{var}",  fmt='-o', capsize=1)
+        #     ax.tick_params(axis='y', labelsize=10)
+        #     ax.set_ylabel(f"Pearson_{var}", fontsize = 16)
+        #     ax.legend(fontsize=14, frameon=False, loc = "upper left") #bbox_to_anchor=(.8, 0.8)
+        #     ax.set_ylim(-1,1) #(0,1)
+        #     # if i == len(varlist)-1:
+        #     # if (row ==1&col==0)or(row ==2&col==1):
+        #     # if i==6 or i==7: #諦め
+        #     ax.tick_params(axis='x', labelsize=10)
+        #     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+        #     # else:
+        #     #     ax.tick_params(axis='x', labelsize=0)
+        #     if (row ==3)&(col==1):
+        #         fig.delaxes(ax)
+        #         # ax.set_visible(False)
+        #         # for spine in ax.spines.values():
+        #         #     spine.set_visible(False)
+        #     if i ==0:
+        #         ax.set_title(f"{reginame} pearson correlaton")
+        #     # fig.delaxes(axes[3,1])
+        # axes[3, 1].set_axis_off()
+        # plt.tight_layout()
+        # ### Export fig
+        # out_dir_fig = out_dir + os.sep + "_png"
+        # os.makedirs(out_dir_fig, exist_ok=True)
+        # fig.savefig(out_dir_fig + os.sep + f"{regioname_fin}{pp}.png")
+        # plt.close()
         
 
         
 """ # from CSV"""
-# csv_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
-csv_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
+csv_dir = f"/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/01_correlation_timelag/{pp}"
+# csv_dir = rf"D:\Malaysia\02_Timeseries\YieldWater\01_correlation_timelag\{pp}"
 csvs = glob.glob(csv_dir + os.sep + "*_abs.csv")
 csvs_std = glob.glob(csv_dir + os.sep + "*_stdabs.csv")
 
