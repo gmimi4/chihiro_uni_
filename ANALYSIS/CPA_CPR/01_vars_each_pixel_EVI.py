@@ -17,7 +17,8 @@ import datetime
 from tqdm import tqdm
 
 # csv_parent_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR\0_vars_timeseries\EVI"
-csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI/_shiftrev'
+# csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI/_shiftrev'
+csv_parent_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/CPA_CPR/0_vars_timeseries/EVI'
 dir_list = ["A1","A2","A3","A4"] #
 csv_dir_list = [csv_parent_dir + os.sep + a for a in dir_list]
 # csv_dir = r"D:\Malaysia\02_Timeseries\CPA_CPR"
