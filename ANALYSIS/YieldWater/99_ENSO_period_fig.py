@@ -12,12 +12,14 @@ from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 
 
-enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
-out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean\_png"
+# enso_csv = r"F:\MAlaysia\ENSO\00_download\meiv2.csv"
+enso_csv = "/Volumes/PortableSSD/Malaysia/ENSO/00_download/meiv2.csv"
+# out_dir = r"D:\Malaysia\02_Timeseries\YieldWater\05_var_variation_ENSO\_composite_plot_years_regimean\_png"
+out_dir = '/Volumes/SSD_2/Malaysia/02_Timeseries/YieldWater/05_var_variation_ENSO/_composite_plot_years_regimean_LaNina/_png'
 os.makedirs(out_dir, exist_ok=True)
 
-startdate = datetime.datetime(2002,1,1)
-enddate = datetime.datetime(2023,12,31)
+startdate = datetime(2002,1,1)
+enddate = datetime(2023,12,31)
 
 mei_month_dict = {"DJ":1,"JF":2,"FM":3,"MA":4,"AM":5,"MJ":6,
                   "JJ":7,"JA":8,"AS":9,"SO":10,"ON":11,"ND":12}
@@ -64,7 +66,8 @@ elnino_list, all_list = [],[]
 for year, row in df_mei.iterrows():
     for colname, value in row.items():
         all_list.append([year, colname])
-        if value >enso_thre:
+        # if value >enso_thre:             ### Change here
+        if value < enso_thre*-1:
             elnino_list.append([year, colname])
         
 
@@ -139,11 +142,9 @@ for i,ti in enumerate(group_ids):
     elnino_datetimes_plot.append([start, end])
         
     
-    
-
 
 fig,ax = plt.subplots(figsize=(10, 5))
-fig.subplots_adjust(hspace=0.5)
+# fig.subplots_adjust(hspace=0.5)
 values = df_mei_series
 colors = ['red' if val > 0 else 'blue' for val in df_mei_series.enso.values]
 ax.bar(values.index, values.enso.values,  color=colors, width=10)
@@ -151,15 +152,16 @@ ax.axhline(0, color='gray', linewidth=0.7) #, linestyle='--'
 first_legend = True
 for interval in elnino_datetimes_plot:
     ax.axvspan(interval[0], interval[1], color='grey', alpha=0.3,
-               label="El Nino period in this study" if first_legend else "")
+               label="La Nina period in this study" if first_legend else "") ### Change here
     first_legend = False
-ax.set_ylabel(f"ENSO Index", fontsize = 14)
-ax.legend(loc="upper right")
+ax.set_ylabel(f"ENSO Index", fontsize = 30)
+ax.tick_params(axis='both', labelsize=25)
+ax.legend(loc="lower center", fontsize=25, bbox_to_anchor=(0.5, 0.95), frameon=False)
 plt.tight_layout()
 ### Export fig
 out_dir_fig = out_dir + os.sep + "_png"
 os.makedirs(out_dir_fig, exist_ok=True)
-fig.savefig(out_dir_fig + os.sep + f"elnino_perido.png")
+fig.savefig(out_dir_fig + os.sep + f"lanina_perido.png") #elnino_perido ### Change here
 plt.close() 
         
 
