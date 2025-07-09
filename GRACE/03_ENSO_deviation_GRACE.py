@@ -17,6 +17,10 @@ import calendar
 import itertools
 from tqdm import tqdm
 import rasterio
+import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
+import matplotlib.colors as colors
+from matplotlib import cm
 
 
 tif_dir = r"F:\MAlaysia\GRACE\02_tif"
@@ -330,7 +334,145 @@ generate_devitif_nonenso(lanina_date_monthly, "lanina", arr_nonla_mean)
 
 
 
+# ---------------
+""" # Plot"""
+# ---------------
+import geopandas as gpd
+from rasterio.windows import from_bounds
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.ticker import FuncFormatter
+
+# shp_region = '/Volumes/SSD_2/Malaysia/Validation/1_Yield_doc/shp/region_slope_fin.shp'
+shp_region = r"D:\Malaysia\Validation\1_Yield_doc\shp\region_slope_fin.shp"
+# tif = '/Volumes/PortableSSD/Malaysia/ENSO/01_deviations/EVI/elnino_devi_all.tif'
+gdf = gpd.read_file(shp_region)
+# gdf = gdf.to_crs(raster_crs)
+
+min_lon = 93
+min_lat = -12
+max_lon = 142
+max_lat = 9
+
+def format_lon(x, pos):
+        return f"{abs(int(x))}°{'E' if x >= 0 else 'W'}"
+
+def format_lat(y, pos):
+    return f"{abs(int(y))}°{'N' if y >= 0 else 'S'}"
+
+def plot_devi(tif_tar, tif_sub, mean_devi):
+    out_png_dir = os.path.dirname(tif_tar) + os.sep + "_png"
+    os.makedirs(out_png_dir, exist_ok=True)
+    """ # obtain data range """
+    with rasterio.open(tif_tar) as src:
+        transform = src.transform
+        raster_crs = src.crs
+        window = from_bounds(min_lon, min_lat, max_lon, max_lat, transform=src.transform)
+        arr_tar = src.read(1, window=window)
+        bounds = rasterio.windows.bounds(window, src.transform)
+        arr_tar_1d = np.ravel(arr_tar)
+        arr_tar_1d = arr_tar_1d[~np.isnan(arr_tar_1d)]
+        # minval = np.nanmin(arr)
+        # maxval = np.nanmax(arr)
+        minval_1 = np.percentile(arr_tar_1d, 5)
+        maxval_1 = np.percentile(arr_tar_1d, 95)
+   
+    with rasterio.open(tif_sub) as src:
+       transform = src.transform
+       raster_crs = src.crs
+       window = from_bounds(min_lon, min_lat, max_lon, max_lat, transform=src.transform)
+       arr_sub = src.read(1, window=window)
+       bounds = rasterio.windows.bounds(window, src.transform)
+       arr_1d_sub = np.ravel(arr_sub)
+       arr_1d_sub = arr_1d_sub[~np.isnan(arr_1d_sub)]
+       # minval = np.nanmin(arr)
+       # maxval = np.nanmax(arr)
+       minval_2 = np.percentile(arr_1d_sub, 5)
+       maxval_2 = np.percentile(arr_1d_sub, 95)
+   
+    ### comparison 
+    minval = min([minval_1, minval_2])
+    maxval = max([maxval_1, maxval_2])
+    norm = TwoSlopeNorm(vmin=minval, vcenter=0, vmax=maxval)
     
+    fig, ax = plt.subplots(figsize=(10, 4))
+    cmap = cm.get_cmap('coolwarm_r').copy()
+    cmap.set_bad(color='none')  # na
+    img = ax.imshow(arr_tar, cmap='coolwarm_r', norm=norm, extent=[bounds[0], bounds[2], bounds[1], bounds[3]], origin='upper')
+    gdf.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
+    ax.xaxis.set_major_formatter(FuncFormatter(format_lon))
+    ax.yaxis.set_major_formatter(FuncFormatter(format_lat))
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3%", pad=0.1)
+    cbar = plt.colorbar(img, cax=cax, shrink=0.8, orientation='vertical', pad=0.07) #ax=ax,
+    if mean_devi =="devi":
+        cbar.set_label("GRACE anomaly \n[cm]", fontsize=25)
+    if mean_devi =="mean":
+        cbar.set_label("GRACE mean \n[cm]", fontsize=25)
+    cbar.ax.tick_params(labelsize=20)
+    ax.tick_params(axis='both', labelsize=20)
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(out_png_dir + os.sep + f'{os.path.basename(tif_tar)[:-4]}.png', dpi=600)
+    plt.close()
+    
+
+meandevi = "devi"
+tifel = r"F:\MAlaysia\GRACE\03_enso_devi\devi_elnino_mean_bynon.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_devi\devi_lanina_mean_bynon.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_devi\devi_elnino_DJF_bynon.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_devi\devi_lanina_DJF_bynon.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_devi\devi_elnino_JJA_bynon.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_devi\devi_lanina_JJA_bynon.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)
             
-    
+tifel = r"F:\MAlaysia\GRACE\03_enso_devi\devi_elnino_MAM_bynon.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_devi\devi_lanina_MAM_bynon.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)  
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_devi\devi_elnino_SON_bynon.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_devi\devi_lanina_SON_bynon.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)    
+
+### mean
+meandevi = "mean"
+tifel = r"F:\MAlaysia\GRACE\03_enso_mean\elnino_mean.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_mean\lanina_mean.tif"
+plot_devi(tifel, tifla, meandevi)      
+plot_devi(tifla, tifel, meandevi)
+
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_mean\elnino_mean_DJF.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_mean\lanina_mean_DJF.tif"
+plot_devi(tifel, tifla, meandevi)
+plot_devi(tifla, tifel, meandevi)
+  
+tifel = r"F:\MAlaysia\GRACE\03_enso_mean\elnino_mean_MAM.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_mean\lanina_mean_MAM.tif"
+plot_devi(tifel, tifla, meandevi)
+plot_devi(tifla, tifel, meandevi)
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_mean\elnino_mean_SON.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_mean\lanina_mean_SON.tif"
+plot_devi(tifel, tifla, meandevi)
+plot_devi(tifla, tifel, meandevi)
+
+tifel = r"F:\MAlaysia\GRACE\03_enso_mean\elnino_mean_JJA.tif"
+tifla = r"F:\MAlaysia\GRACE\03_enso_mean\lanina_mean_JJA.tif"
+plot_devi(tifel, tifla, meandevi)
+plot_devi(tifla, tifel, meandevi)
+
+### simple GRACE val
+tifel = r"F:\MAlaysia\GRACE\02_tif\yearly_mean\GRACE_mean_allperiod.tif"
+tifla = r"F:\MAlaysia\GRACE\02_tif\yearly_mean\GRACE_mean_allperiod.tif"
+plot_devi(tifel, tifla, meandevi)
+
 
