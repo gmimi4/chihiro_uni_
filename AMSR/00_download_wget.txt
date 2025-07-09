@@ -1,8 +1,0 @@
-AMSR2 ASC
-wget -P "D:\Malaysia\AMSR2\ASC\0_download" --load-cookies C:\.urs_cookies --save-cookies C:\.urs_cookies --keep-session-cookies --user=chihiro_naito --password=6668Earthdata -i "D:\Malaysia\AMSR2\ASC\0_download\subset_LPRM_AMSR2_DS_A_SOILM3_001_20240211_051016_.txt"
-
-AMSR2 DSC
-wget -P "D:\Malaysia\AMSR2\DSC\0_download" --load-cookies C:\.urs_cookies --save-cookies C:\.urs_cookies --keep-session-cookies --user=chihiro_naito --password=6668Earthdata -i "D:\Malaysia\AMSR2\DSC\0_download\subset_LPRM_AMSR2_DS_D_SOILM3_001_20240211_051132_.txt"
-
-AMSRE
-wget -P "E:\Malaysia\AMSRE\0_download" --load-cookies C:\.urs_cookies --save-cookies C:\.urs_cookies --keep-session-cookies --user=chihiro_naito --password=6668Earthdata -i "E:\Malaysia\AMSRE\0_download\subset_LPRM_AMSRE_SOILM2_002_20240211_052047_.txt"
