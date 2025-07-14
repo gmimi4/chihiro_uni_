@@ -20,7 +20,8 @@ from pyproj.crs import CRS
 from tqdm import tqdm
 import copy
 import math
-from natsort import natsorted
+import datetime
+# from natsort import natsorted
 
 with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
     rio_crs = CRS.from_epsg(4326)
@@ -29,18 +30,27 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
 
 #dailyからのmonthlyにしようかな
 # 0.1 degree grid
-rain_annual_ave = r"D:\Malaysia\GPM\01_tif\_annual_sum_ave\IMERG_annual_sum_ave.tif"
-rain_tif_dir = r"D:\Malaysia\GPM\01_tif"
-temp_tif_dir = r"F:\MAlaysia\ECMWF\Temperature_2m\02_tif\daily"
-out_dir = r"D:\Malaysia\KBDI\1_daily"
+# rain_annual_ave = r"D:\Malaysia\GPM\01_tif\_annual_sum_ave\IMERG_annual_sum_ave.tif"
+# rain_tif_dir = r"D:\Malaysia\GPM\01_tif"
+# temp_tif_dir = r"F:\MAlaysia\ECMWF\Temperature_2m\02_tif\daily"
+# out_dir = r"D:\Malaysia\KBDI\1_daily"
+rain_annual_ave = "/Volumes/SSD_2/Malaysia/GPM/01_tif_Affine/_annual_sum_ave/IMERG_annual_sum_ave.tif"
+rain_tif_dir = "/Volumes/SSD_2/Malaysia/GPM/01_tif_Affine"
+temp_tif_dir = "/Volumes/PortableSSD/MAlaysia/ECMWF/Temperature_2m/02_tif/daily_1950_resample_EVI"
+out_dir = "/Volumes/SSD_2/Malaysia/KBDI/1_daily"
 
-rain_tifs = glob.glob(rain_tif_dir+"\\*tif")
-temp_tifs = glob.glob(temp_tif_dir+"\\*tif")
+rain_tifs = glob.glob(rain_tif_dir+os.sep + "*tif")
+temp_tifs = glob.glob(temp_tif_dir+os.sep + "*tif")
 
 #sort関数は使用データによって調整して
-rain_tifs_sort = natsorted(rain_tifs, key=lambda y: int(os.path.basename(y)[:-4].split("_")[1]))
-temp_tifs_sort = natsorted(temp_tifs, key=lambda y: int(os.path.basename(y)[:-4]))
+# rain_tifs_sort = natsorted(rain_tifs, key=lambda y: int(os.path.basename(y)[:-4].split("_")[1]))
+# temp_tifs_sort = natsorted(temp_tifs, key=lambda y: int(os.path.basename(y)[:-4]))
+rain_tifs_sort = rain_tifs
+temp_tifs_sort = temp_tifs
 
+datelist = [os.path.basename(t)[:-4].split("_")[1] for t in temp_tifs_sort]
+datelist = [datetime.datetime.strptime(t,'%Y%m%d') for t in datelist]
+datelist.sort()
 
 """
 # allign rasters #rain tifを小さい方（現状ではTemp）に合わせる
@@ -66,10 +76,17 @@ extent_polygon = gpd.GeoDataFrame(geometry=[polygon_geom], crs=proj_crs)
 annual_rain_clip, raster_transform = mask(src_rain_annual, extent_polygon.geometry, crop=True)
 
 #右端columnがNoDataになっているので削除してshapeをTempに合わせる
-if annual_rain_clip.shape != arr_temp.shape:
-    annual_rain_clip = np.delete(annual_rain_clip[0], [-1], 1)
-else:
+if len(annual_rain_clip.shape)==3:
     annual_rain_clip = annual_rain_clip[0]
+
+assert annual_rain_clip.shape == arr_temp.shape
+# if annual_rain_clip.shape != arr_temp.shape:
+#     annual_rain_clip = np.delete(annual_rain_clip[0], [-1], 1)
+# else:
+#     annual_rain_clip = annual_rain_clip[0]
+
+src_rain_annual.close()
+src_temp.close()
     
 annual_rain_clip_inch = annual_rain_clip/25.4
 
@@ -86,28 +103,29 @@ annual_rain_clip_inch = annual_rain_clip/25.4
 """
 # 各日のtempとrainで処理開始
 """
-for i in tqdm(range(len(temp_tifs_sort))):
-
-    temp_tif = temp_tifs[i]
-    datee = os.path.basename(temp_tif)[:-4] #日付
-    # rainは同じ日付のファイル
-    # GPMに欠損があった
+# for i in tqdm(range(len(temp_tifs_sort))):
+for i,date_time in tqdm(enumerate(datelist)):
+    datee = datetime.datetime.strftime(date_time, '%Y%m%d')
+    temp_tif = [t for t in temp_tifs_sort if datee in os.path.basename(t)[:-4]][0]
+    filename_temp = os.path.basename(temp_tif)[:-4]
+    # datee = filename_temp.split("_")[1]
     try:        
-        rain_tif = [t for t in rain_tifs_sort if datee in t][0]
+        rain_tif = [t for t in rain_tifs_sort if datee in os.path.basename(t)[:-4]][0]
     except:
-        print(datee)
         continue
     
     ### daily rain tifをクロップ
-    src_rain = rasterio.open(rain_tif)
-    arr_rain = src_rain.read(1)
+    with rasterio.open(rain_tif) as src_rain:
+        arr_rain = src_rain.read(1)
+        rain_clip, raster_transform = mask(src_rain, extent_polygon.geometry, crop=True)
     
-    rain_clip, raster_transform = mask(src_rain, extent_polygon.geometry, crop=True)
-    #右端columnがNoDataになっているので削除してshapeをTempに合わせる
-    if rain_clip.shape != arr_temp.shape:
-        rain_clip = np.delete(rain_clip[0], [-1], 1)
-    else:
+    if len(rain_clip.shape)==3:
         rain_clip = rain_clip[0]
+    assert rain_clip.shape == arr_temp.shape
+    # if rain_clip.shape != arr_temp.shape:
+    #     rain_clip = np.delete(rain_clip[0], [-1], 1)
+    # else:
+    #     rain_clip = rain_clip[0]
     
     """
     # Net rainレイヤー
@@ -117,11 +135,13 @@ for i in tqdm(range(len(temp_tifs_sort))):
     rain_clip_inch = rain_clip/25.4
     
     #前日レイヤーがあること
-    if i ==0:
+    # if i ==0:
+    if datee == datetime.datetime.strftime(datelist[0], '%Y%m%d'):
         net_rain_for_tomorrow = np.zeros(rain_clip_inch.shape)
     else:
         pass
     
+    print(i)
     rain_clip_inch_new = rain_clip_inch + net_rain_for_tomorrow
 
     #該当するインデックスを取得する
@@ -150,7 +170,8 @@ for i in tqdm(range(len(temp_tifs_sort))):
     """
     Q yesterday
     """
-    if i==0:
+    # if i==0:
+    if datee == datetime.datetime.strftime(datelist[0], '%Y%m%d'):
         # Q_yesterday = np.zeros(arr_temp.shape, dtype=float)  #Initialはゼロ
         Q_yesterday = np.full(arr_temp.shape, 400).astype(float)  #Initialは400
     else:
@@ -183,9 +204,10 @@ for i in tqdm(range(len(temp_tifs_sort))):
     
     ### Export
     
-    outfile = out_dir + f"\\KBDI_{datee}.tif"
+    outfile = out_dir + os.sep + f"KBDI_{datee}.tif"
     with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
         with rasterio.open(outfile, "w",**meta) as dst:
             dst.write(Q_today,1)
     
     Q_yesterday = Q_today
+

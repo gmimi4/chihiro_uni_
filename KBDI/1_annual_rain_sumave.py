@@ -26,14 +26,17 @@ with rasterio.Env(OSR_WKT_FORMAT="WKT2_2018"):
 
 #dailyからのmonthlyにしようかな
 # 0.1 degree grid
-rain_tif_dir = r"D:\Malaysia\GPM\01_tif"
-out_dir = r"D:\Malaysia\GPM\01_tif\_annual_sum_ave"
+# rain_tif_dir = r"D:\Malaysia\GPM\01_tif"
+# out_dir = r"D:\Malaysia\GPM\01_tif\_annual_sum_ave"
+rain_tif_dir = r"/Volumes/SSD_2/Malaysia/GPM/01_tif_Affine"
+out_dir = rain_tif_dir + os.sep + "_annual_sum_ave"
+os.makedirs(out_dir, exist_ok=True)
 
-rain_tifs = glob.glob(rain_tif_dir+"\\*tif")
+rain_tifs = glob.glob(rain_tif_dir+os.sep + "*tif")
 
 
 ### Obtain anual mean (sum) rain
-years_list = [y for y in range(2000,2023,1)]
+years_list = [y for y in range(2000,2024,1)]
 rain_tifs_years = {}
 for year in years_list:
     rain_tifs_year = []
@@ -66,7 +69,7 @@ sumarr_stack = np.stack(all_sum_arr)
 array_ave = np.nanmean(all_sum_arr, axis=0)
 
 #Export
-out_path = out_dir + "\\IMERG_annual_sum_ave.tif"
+out_path = out_dir + os.sep + "IMERG_annual_sum_ave.tif"
 sample_src = rasterio.open(rain_tifs[0])
 meta = sample_src.meta
 
